@@ -1,22 +1,6 @@
-from typing import List, Set
+from typing import Set
+
 from sc2.ids.unit_typeid import UnitTypeId as UnitID
-
-BUILD_ORDER: List[UnitID] = [
-    UnitID.OVERLORD,
-    UnitID.DRONE,
-    UnitID.DRONE,
-    UnitID.DRONE,
-    UnitID.HATCHERY,
-    UnitID.DRONE,
-    UnitID.DRONE,
-    UnitID.DRONE,
-    UnitID.SPAWNINGPOOL,
-    UnitID.DRONE,
-    UnitID.DRONE,
-    UnitID.DRONE,
-    UnitID.OVERLORD,
-
-]
 
 ATTACK_TARGET_IGNORE: Set[UnitID] = {
     UnitID.SCV,

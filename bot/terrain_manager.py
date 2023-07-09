@@ -1,17 +1,19 @@
-from typing import List
+from typing import TYPE_CHECKING, List
 
 import numpy as np
-from scipy import spatial
-
-from bot.manager import Manager
-from sc2.bot_ai import BotAI
 from sc2.game_info import Ramp
 from sc2.position import Point2
 from sc2.units import Units
+from scipy import spatial
+
+from bot.manager import Manager
+
+if TYPE_CHECKING:
+    from ares import AresBot
 
 
 class TerrainManager(Manager):
-    def __init__(self, bot: BotAI):
+    def __init__(self, bot: "AresBot"):
         super().__init__(bot)
         self.expansions: List[Point2] = []
         # this will get updated when `_calculate_nydus_spots` is run

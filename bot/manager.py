@@ -1,10 +1,13 @@
 from abc import ABC, abstractmethod
-from bot.custom_bot_ai import CustomBotAI
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ares import AresBot
 
 
 class Manager(ABC):
-    def __init__(self, bot: CustomBotAI) -> None:
-        self.bot: CustomBotAI = bot
+    def __init__(self, bot: "AresBot") -> None:
+        self.bot: AresBot = bot
 
     @abstractmethod
     async def update(self, iteration: int) -> None:

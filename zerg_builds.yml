@@ -1,0 +1,78 @@
+# Save the game opening and result to disk?
+# Setting to `True` allows Ares to select a new opening after defeat
+UseData: True
+# How should we choose a build? Cycle is the only option for now
+BuildSelection: Cycle
+# For each Race / Opponent ID choose a build selection
+BuildChoices:
+    # test_123 is active if Debug: True (set via a `config.yml` file)
+    test_123:
+        BotName: Test
+        Cycle:
+            - Standard
+
+    Protoss:
+        BotName: ProtossRace
+        Cycle:
+            - Standard
+            - Greed
+
+    Random:
+        BotName: RandomRace
+        Cycle:
+            - Standard
+            - Greed
+
+    Terran:
+        BotName: TerranRace
+        Cycle:
+            - Standard
+            - Greed
+
+    Zerg:
+        BotName: ZergRace
+        Cycle:
+            - Standard
+            - Greed
+
+Builds:
+    Standard:
+        # Build constant workers till x supply
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 drone
+            - 13 overlord
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 expand
+            - 16 drone
+            - 17 drone
+            - 18 drone
+            - 19 spawningpool
+            - 18 drone
+
+    Greed:
+        # Build constant workers till x supply
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 drone
+            - 13 overlord
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 16 drone
+            - 17 expand
+            - 16 drone
+            - 17 drone
+            - 18 drone
+            - 19 expand
+            - 18 drone
+            - 19 drone
+            - 20 expand
+            - 19 drone
+            - 20 drone
+            - 21 drone
+            - 21 spawningpool
+
