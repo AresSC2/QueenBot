@@ -3,7 +3,7 @@ from typing import List
 from ares import AresBot
 from ares.consts import UnitRole
 from ares.cython_extensions.general_utils import cy_unit_pending
-from ares.cython_extensions.geometry import cy_towards
+from ares.cython_extensions.geometry import cy_towards, cy_distance_to
 from ares.cython_extensions.units_utils import cy_closest_to
 from sc2.ids.ability_id import AbilityId
 from sc2.ids.unit_typeid import UnitTypeId as UnitID
@@ -16,6 +16,7 @@ from bot.manager import Manager
 from bot.terrain_manager import TerrainManager
 from bot.unit_manager import UnitManager
 
+MAX_SPINES: int = 4
 REQUIRED_UPGRADES: List[AbilityId] = [
     AbilityId.RESEARCH_ZERGMISSILEWEAPONSLEVEL1,
     AbilityId.RESEARCH_ZERGMISSILEWEAPONSLEVEL2,
@@ -38,6 +39,7 @@ class ProductionManager(Manager):
         self.unit_manager: UnitManager = unit_manager
 
         self._added_third_hatch: bool = False
+        self._chosen_opening: str = self.bot.build_order_runner.chosen_opening.upper()
 
     @property
     def need_overlord(self) -> bool:
@@ -79,10 +81,7 @@ class ProductionManager(Manager):
             return
 
         # add 3rd hatch to track soon as standard BO is done
-        if (
-            not self._added_third_hatch
-            and "STANDARD" in self.bot.build_order_runner.chosen_opening.upper()
-        ):
+        if not self._added_third_hatch and "STANDARD" in self._chosen_opening:
             loc: Point2 = self.bot.mediator.get_defensive_third
             if worker := self.bot.mediator.select_worker(target_position=loc):
                 self.bot.mediator.build_with_specific_worker(
@@ -90,6 +89,9 @@ class ProductionManager(Manager):
                 )
                 self.bot.mediator.assign_role(tag=worker.tag, role=UnitRole.BUILDING)
                 self._added_third_hatch = True
+
+        if "SAFE" in self._chosen_opening and self.bot.time < 360.0:
+            await self._manage_spines()
 
         idle_townhalls: Units = self.bot.townhalls.filter(
             lambda s: s.is_ready and s.is_idle
@@ -136,7 +138,7 @@ class ProductionManager(Manager):
                 self.bot.larva.first.train(UnitID.OVERLORD)
             # build workers
             if self.bot.supply_left >= 1 and self.bot.minerals < 800:
-                max_workers: int = 35 if self.bot.townhalls.amount <= 3 else 65
+                max_workers: int = 38 if self.bot.townhalls.amount <= 2 else 65
                 if (
                     self.num_workers <= max_workers
                     and self.bot.can_afford(UnitID.DRONE)
@@ -187,8 +189,12 @@ class ProductionManager(Manager):
                 )
 
         # expand
+        can_expand: bool = (
+            False if self._chosen_opening == "SAFE" and self.bot.time < 300.0 else True
+        )
         if (
             self.bot.can_afford(UnitID.HATCHERY)
+            and can_expand
             and UnitID.HATCHERY not in self.bot.mediator.get_building_counter
         ):
             if location := await self.bot.get_next_expansion():
@@ -198,8 +204,9 @@ class ProductionManager(Manager):
 
         # evo chambers
         max_evos: int = 2
+        worker_limit: int = 32 if self._chosen_opening == "SAFE" else 56
         if (
-            self.num_workers > 56
+            self.num_workers > worker_limit
             and self.bot.structures(UnitID.EVOLUTIONCHAMBER).amount < max_evos
             and self.bot.can_afford(UnitID.EVOLUTIONCHAMBER)
             and not self.bot.already_pending(UnitID.EVOLUTIONCHAMBER)
@@ -215,7 +222,8 @@ class ProductionManager(Manager):
             )
 
         # extractors
-        max_extractors: int = 2 if self.num_workers >= 38 else 0
+        min_worker = 30 if self._chosen_opening == "SAFE" else 38
+        max_extractors: int = 2 if self.num_workers >= min_worker else 0
         if (
             self.bot.gas_buildings.amount < max_extractors
             and self.bot.can_afford(UnitID.EXTRACTOR)
@@ -313,3 +321,41 @@ class ProductionManager(Manager):
                 )
                 if placement:
                     networks.first(AbilityId.BUILD_NYDUSWORM, placement)
+
+    async def _manage_spines(self):
+        if self.bot.time < 135.0:
+            return
+
+        own_structures_dict: dict[
+            UnitID, Units
+        ] = self.bot.mediator.get_own_structures_dict
+        if UnitID.SPAWNINGPOOL not in own_structures_dict:
+            return
+
+        if own_structures_dict[UnitID.SPAWNINGPOOL].ready:
+            own_nat: Point2 = self.bot.mediator.get_own_nat
+            hatch_at_nat: list[Unit] = [
+                h
+                for h in self.bot.townhalls
+                if cy_distance_to(h.position, own_nat) < 5.0 and h.is_ready
+            ]
+            if len(hatch_at_nat) == 0:
+                return
+
+            num_current_spines: int = self.bot.mediator.get_building_counter[
+                UnitID.SPINECRAWLER
+            ]
+            # only have one drone on journey to position at a time
+            if num_current_spines > 0:
+                return
+
+            if UnitID.SPINECRAWLER in own_structures_dict:
+                num_current_spines += len(own_structures_dict[UnitID.SPINECRAWLER])
+
+            if num_current_spines >= MAX_SPINES:
+                return
+
+            await self._build_structure(
+                UnitID.SPINECRAWLER,
+                own_nat.towards(self.bot.game_info.map_center, 5.9),
+            )

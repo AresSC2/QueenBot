@@ -9,33 +9,53 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - Standard
+            - Safe
 
     Protoss:
         BotName: ProtossRace
         Cycle:
             - Standard
             - Greed
+            - Safe
 
     Random:
         BotName: RandomRace
         Cycle:
             - Standard
             - Greed
+            - Safe
 
     Terran:
         BotName: TerranRace
         Cycle:
             - Standard
             - Greed
+            - Safe
 
     Zerg:
         BotName: ZergRace
         Cycle:
             - Standard
             - Greed
+            - Safe
 
 Builds:
+    Safe:
+        # Build constant workers till x supply
+        ConstantWorkerProductionTill: 0
+        OpeningBuildOrder:
+            - 12 drone
+            - 13 overlord
+            - 13 drone
+            - 14 drone
+            - 15 drone
+            - 16 expand
+            - 15 drone
+            - 16 drone
+            - 17 drone
+            - 18 spawningpool
+            - 17 drone
+
     Standard:
         # Build constant workers till x supply
         ConstantWorkerProductionTill: 0

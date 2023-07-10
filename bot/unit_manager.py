@@ -56,12 +56,52 @@ class UnitManager(Manager):
         self.ol_spots_index: int = 0
 
     @property
+    def defensive_queen_policy(self) -> Dict:
+        return {
+            "creep_queens": {
+                "active": True,
+                "distance_between_queen_tumors": 3,
+                "first_tumor_position": self.terrain_manager.natural_location.towards(
+                    self.bot.game_info.map_center, 9
+                ),
+                "priority": True,
+                "prioritize_creep": lambda: True,
+                "max": 1,
+                "defend_against_ground": True,
+                "rally_point": self.terrain_manager.natural_location,
+                "priority_defence_list": {
+                    UnitID.ZERGLING,
+                    UnitID.MARINE,
+                    UnitID.ZEALOT,
+                },
+            },
+            "creep_dropperlord_queens": {
+                "active": True,
+                "priority": True,
+                "max": 1,
+                "pass_own_threats": True,
+                "target_expansions": [
+                    el[0] for el in self.terrain_manager.expansions[-6:-3]
+                ],
+            },
+            "defence_queens": {
+                "attack_condition": lambda: self.offensive,
+                "rally_point": self.terrain_manager.natural_location,
+            },
+            "inject_queens": {"active": False},
+            "nydus_queens": {
+                "active": True,
+                "max": 12,
+                "steal_from": {QueenRoles.Defence},
+            },
+        }
+
+    @property
     def early_game_queen_policy(self) -> Dict:
         return {
             "creep_queens": {
                 "active": True,
                 "distance_between_queen_tumors": 3,
-                "distance_between_existing_tumors": 5,
                 "first_tumor_position": self.terrain_manager.natural_location.towards(
                     self.bot.game_info.map_center, 9
                 ),
@@ -105,7 +145,6 @@ class UnitManager(Manager):
                 "priority": True,
                 "defend_against_ground": True,
                 "distance_between_queen_tumors": 3,
-                "distance_between_existing_tumors": 5,
                 "priority_defence_list": {
                     UnitID.BATTLECRUISER,
                     UnitID.LIBERATOR,
@@ -134,11 +173,17 @@ class UnitManager(Manager):
         }
 
     def _on_first_iteration(self) -> None:
+        policy = (
+            self.defensive_queen_policy
+            if self.bot.build_order_runner.chosen_opening == "Safe"
+            else self.early_game_queen_policy
+        )
+
         # initiating queens-sc2` here
         self.queens = Queens(
             self.bot,
             debug=False,
-            queen_policy=self.early_game_queen_policy,
+            queen_policy=policy,
             map_data=self.map_data,
         )
         self.bot.units(UnitID.OVERLORD).first.move(self.bot.mediator.get_own_nat)
@@ -534,9 +579,6 @@ class UnitManager(Manager):
                 return overlord.tag
 
     def _manage_queen_policy(self, iteration: int) -> None:
-        if iteration == 0:
-            self.queens.set_new_policy(self.early_game_queen_policy, reset_roles=True)
-
         if not self.switched_queen_policy and self.bot.time > 420:
             self.switched_queen_policy = True
             self.queens.set_new_policy(self.mid_game_queen_policy, reset_roles=True)
