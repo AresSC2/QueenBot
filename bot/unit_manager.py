@@ -86,6 +86,7 @@ class UnitManager(Manager):
             },
             "defence_queens": {
                 "attack_condition": lambda: self.offensive,
+                "pass_own_threats": True,
                 "rally_point": self.terrain_manager.natural_location,
             },
             "inject_queens": {"active": False},
@@ -127,6 +128,7 @@ class UnitManager(Manager):
             },
             "defence_queens": {
                 "attack_condition": lambda: self.offensive,
+                "pass_own_threats": True,
                 "rally_point": self.terrain_manager.natural_location,
             },
             "inject_queens": {"active": False},
@@ -162,6 +164,7 @@ class UnitManager(Manager):
             },
             "defence_queens": {
                 "attack_condition": lambda: self.offensive,
+                "pass_own_threats": True,
                 "rally_point": self.terrain_manager.natural_location,
             },
             "inject_queens": {"active": False},
