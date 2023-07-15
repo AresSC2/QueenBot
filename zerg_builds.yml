@@ -9,35 +9,27 @@ BuildChoices:
     test_123:
         BotName: Test
         Cycle:
-            - Safe
+            - Standard
 
     Protoss:
         BotName: ProtossRace
         Cycle:
             - Standard
-            - Greed
-            - Safe
 
     Random:
         BotName: RandomRace
         Cycle:
             - Standard
-            - Greed
-            - Safe
 
     Terran:
         BotName: TerranRace
         Cycle:
             - Standard
-            - Greed
-            - Safe
 
     Zerg:
         BotName: ZergRace
         Cycle:
             - Standard
-            - Greed
-            - Safe
 
 Builds:
     Safe:

@@ -103,9 +103,6 @@ class UnitManager(Manager):
             "creep_queens": {
                 "active": True,
                 "distance_between_queen_tumors": 3,
-                "first_tumor_position": self.terrain_manager.natural_location.towards(
-                    self.bot.game_info.map_center, 9
-                ),
                 "priority": True,
                 "prioritize_creep": lambda: True,
                 "max": 4,
@@ -615,19 +612,22 @@ class UnitManager(Manager):
                 self.ol_spots_index += 1
 
     def _update_creep_paths(self) -> None:
-        own_nat: Point2 = self.bot.mediator.get_own_nat
-        hatchery_at_nat = self.bot.townhalls.filter(
-            lambda _th: _th.is_ready and cy_distance_to(_th.position, own_nat) < 10.0
-        )
-
         creep_paths = []
         # early game, concentrate pushing creep out of the natural
-        if self.bot.time < 210.0 and hatchery_at_nat:
-            creep_paths.append((own_nat, self.bot.mediator.get_enemy_nat))
-            creep_paths.append((own_nat, self.bot.mediator.get_defensive_third))
-        else:
-            for th in self.bot.ready_townhalls:
-                for el in self.bot.expansion_locations_list:
-                    if th.position != el and el != self.bot.start_location:
-                        creep_paths.append((th.position, el))
+        if self.bot.time < 210.0:
+            own_nat: Point2 = self.bot.mediator.get_own_nat
+            hatchery_at_nat = self.bot.townhalls.filter(
+                lambda _th: _th.is_ready
+                and cy_distance_to(_th.position, own_nat) < 10.0
+            )
+            if hatchery_at_nat:
+                creep_paths.append((own_nat, self.bot.mediator.get_enemy_nat))
+                creep_paths.append((own_nat, self.bot.mediator.get_defensive_third))
+                self.queens.update_creep_targets(creep_paths)
+                return
+
+        for th in self.bot.ready_townhalls:
+            for el in self.bot.expansion_locations_list:
+                if th.position != el and el != self.bot.start_location:
+                    creep_paths.append((th.position, el))
         self.queens.update_creep_targets(creep_paths)

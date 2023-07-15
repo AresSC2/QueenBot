@@ -35,6 +35,8 @@ class ProductionManager(Manager):
         unit_manager: UnitManager,
     ):
         super().__init__(bot)
+        self.MACRO_HATCH_INTERVAL: float = 20.0
+        self.last_macro_hatch_time: float = 0.0
         self.terrain_manager: TerrainManager = terrain_manager
         self.unit_manager: UnitManager = unit_manager
 
@@ -117,11 +119,28 @@ class ProductionManager(Manager):
             await self._manage_queen_production(idle_townhalls)
         await self._morph_core_structures()
 
+        if (
+            self.bot.minerals > 600
+            and len(self.bot.townhalls) < 20
+            and self.bot.time > self.last_macro_hatch_time + self.MACRO_HATCH_INTERVAL
+        ):
+            await self._build_structure(
+                UnitID.HATCHERY, self.bot.game_info.map_center, max_distance=50
+            )
+            self.last_macro_hatch_time = self.bot.time
+
     async def _build_structure(
-        self, structure_type: UnitID, pos: Point2, random_alternative: bool = True
+        self,
+        structure_type: UnitID,
+        pos: Point2,
+        max_distance: int = 20,
+        random_alternative: bool = True,
     ) -> None:
         build_pos: Point2 = await self.bot.find_placement(
-            structure_type, pos, random_alternative=random_alternative
+            structure_type,
+            pos,
+            random_alternative=random_alternative,
+            max_distance=max_distance,
         )
         if build_pos:
             if worker := self.bot.mediator.select_worker(target_position=build_pos):
