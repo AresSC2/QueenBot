@@ -323,7 +323,7 @@ class UnitManager(Manager):
             and cy_distance_to(s.position, self.bot.start_location) < 60.0
         )
 
-        if bunkers and len(self.bunker_drone_tags) < 7:
+        if bunkers and len(self.bunker_drone_tags) < 9:
             if worker := self.bot.mediator.select_worker(
                 target_position=self.bot.start_location
             ):
@@ -333,17 +333,17 @@ class UnitManager(Manager):
         if drones := self.bot.workers.tags_in(self.bunker_drone_tags):
             for drone in drones:
                 if bunkers or marines or scvs:
-                    if drone.health_percentage < 0.3:
+                    if drone.health_percentage < 0.4:
                         drone.gather(
                             self.bot.mineral_field.closest_to(self.bot.start_location)
                         )
                         self.bunker_drone_tags.remove(drone.tag)
                         self.assign_drone_back_to_gathering(drone.tag)
+                    elif scvs:
+                        drone.attack(cy_closest_to(drone.position, scvs))
                     elif marines:
                         cy_closest_to(drone.position, marines)
                         drone.attack(cy_closest_to(drone.position, marines))
-                    elif scvs:
-                        drone.attack(cy_closest_to(drone.position, scvs))
                     else:
                         drone.attack(cy_closest_to(drone.position, bunkers))
                 else:
@@ -379,6 +379,7 @@ class UnitManager(Manager):
             )
         )
 
+        all_enemy_workers: Units = self.bot.enemy_units(MELEE_TYPES)
         enemy_lings: Units = enemy_workers(UnitID.ZERGLING)
 
         # this makes sure we go all in after defending
@@ -426,22 +427,29 @@ class UnitManager(Manager):
             close_mineral_patch: Unit = self.bot.mineral_field.closest_to(
                 self.bot.start_location
             )
-            if defence_workers and enemy_workers:
+            if defence_workers and all_enemy_workers:
                 for worker in defence_workers:
+                    if worker.health_percentage < 0.2:
+                        worker.gather(
+                            self.bot.mineral_field.closest_to(self.bot.start_location)
+                        )
+                        self.assign_drone_back_to_gathering(worker.tag)
+                        continue
+
                     in_attack_range: list[Unit] = cy_in_attack_range(
-                        worker, enemy_workers
+                        worker, all_enemy_workers
                     )
                     in_range_target: Optional[Unit] = None
                     if in_attack_range:
                         in_range_target = cy_pick_enemy_target(in_attack_range)
-                    closest_enemy: Unit = cy_closest_to(worker.position, enemy_workers)
+                    closest_enemy: Unit = cy_closest_to(worker.position, all_enemy_workers)
                     if (
-                        enemy_workers
-                        and enemy_workers.closest_to(close_mineral_patch).distance_to(
+                        all_enemy_workers
+                        and all_enemy_workers.closest_to(close_mineral_patch).distance_to(
                             close_mineral_patch
                         )
                         > 2
-                        and stack_detected(enemy_workers)
+                        and stack_detected(all_enemy_workers)
                     ):
                         worker.gather(close_mineral_patch)
                     # in attack range of enemy, prioritise attacking
@@ -463,7 +471,7 @@ class UnitManager(Manager):
                 for worker in defence_workers:
                     if worker.weapon_cooldown == 0:
                         worker.attack(self.bot.enemy_start_locations[0])
-                    elif close_mfs and worker.health_percentage < 0.4:
+                    elif close_mfs:
                         worker.gather(close_mineral_patch)
             elif defence_workers:
                 for worker in defence_workers:
