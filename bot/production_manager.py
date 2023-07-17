@@ -190,10 +190,12 @@ class ProductionManager(Manager):
                     idle_evos.first(upgrade)
 
     async def _morph_core_structures(self) -> None:
+        building_counter: dict[UnitID, int] = self.bot.mediator.get_building_counter
+        own_structures_dict: dict[UnitID, Units] = self.bot.mediator.get_own_structures_dict
         # spawning pool
         if (
             len(self.unit_manager.worker_defence_tags) == 0
-            and not (self.bot.structures(UnitID.SPAWNINGPOOL))
+            and UnitID.SPAWNINGPOOL not in own_structures_dict
             and self.bot.can_afford(UnitID.SPAWNINGPOOL)
         ):
             if (
@@ -222,14 +224,18 @@ class ProductionManager(Manager):
                 )
 
         # evo chambers
+        num_evos: int = building_counter[UnitID.EVOLUTIONCHAMBER]
         max_evos: int = 2
         worker_limit: int = 32 if self._chosen_opening == "SAFE" else 56
+
+        if UnitID.EVOLUTIONCHAMBER in own_structures_dict:
+            num_evos += len(own_structures_dict[UnitID.EVOLUTIONCHAMBER])
+
         if (
             self.num_workers > worker_limit
-            and self.bot.structures(UnitID.EVOLUTIONCHAMBER).amount < max_evos
+            and num_evos < max_evos
             and self.bot.can_afford(UnitID.EVOLUTIONCHAMBER)
-            and not self.bot.already_pending(UnitID.EVOLUTIONCHAMBER)
-            and UnitID.EVOLUTIONCHAMBER not in self.bot.mediator.get_building_counter
+            and building_counter[UnitID.EVOLUTIONCHAMBER] == 0
         ):
             await self._build_structure(
                 UnitID.EVOLUTIONCHAMBER,
@@ -246,8 +252,7 @@ class ProductionManager(Manager):
         if (
             self.bot.gas_buildings.amount < max_extractors
             and self.bot.can_afford(UnitID.EXTRACTOR)
-            and UnitID.EXTRACTOR not in self.bot.mediator.get_building_counter
-            and not self.bot.already_pending(UnitID.EXTRACTOR)
+            and building_counter[UnitID.EXTRACTOR] == 0
         ):
             if worker := self.bot.mediator.select_worker(
                 target_position=self.bot.start_location
@@ -265,10 +270,9 @@ class ProductionManager(Manager):
         # nydus network
         if (
             (self.bot.townhalls(UnitID.LAIR).ready or self.bot.townhalls(UnitID.HIVE))
-            and not self.bot.structures(UnitID.NYDUSNETWORK)
+            and UnitID.NYDUSNETWORK not in own_structures_dict
             and self.bot.can_afford(UnitID.NYDUSNETWORK)
-            and not self.bot.already_pending(UnitID.NYDUSNETWORK)
-            and UnitID.NYDUSNETWORK not in self.bot.mediator.get_building_counter
+            and building_counter[UnitID.NYDUSNETWORK] == 0
         ):
             await self._build_structure(
                 UnitID.NYDUSNETWORK,
@@ -283,10 +287,9 @@ class ProductionManager(Manager):
             and (
                 self.bot.townhalls(UnitID.LAIR).ready or self.bot.townhalls(UnitID.HIVE)
             )
-            and not self.bot.structures(UnitID.INFESTATIONPIT)
+            and UnitID.INFESTATIONPIT not in own_structures_dict
             and self.bot.can_afford(UnitID.INFESTATIONPIT)
-            and not self.bot.already_pending(UnitID.INFESTATIONPIT)
-            and UnitID.INFESTATIONPIT not in self.bot.mediator.get_building_counter
+            and building_counter[UnitID.INFESTATIONPIT] == 0
         ):
             await self._build_structure(
                 UnitID.INFESTATIONPIT,
