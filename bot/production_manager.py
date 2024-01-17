@@ -1,6 +1,7 @@
 from typing import List
 
 from ares import AresBot
+from ares.behaviors.macro import AutoSupply, SpawnController
 from ares.consts import UnitRole
 from ares.cython_extensions.general_utils import cy_unit_pending
 from ares.cython_extensions.geometry import cy_towards, cy_distance_to
@@ -115,8 +116,8 @@ class ProductionManager(Manager):
         await self._upgrade_townhalls(idle_townhalls)
         await self._manage_upgrades()
 
-        if self.bot.supply_left >= 2:
-            await self._manage_queen_production(idle_townhalls)
+        self.bot.register_behavior(SpawnController({UnitID.QUEEN: {"proportion": 1.0, "priority": 0}}))
+
         await self._morph_core_structures()
 
         if (
@@ -153,8 +154,9 @@ class ProductionManager(Manager):
         # drones and overlords from larva
         if self.bot.larva and self.bot.minerals >= 50:
             # overlords
-            if self.need_overlord and self.bot.can_afford(UnitID.OVERLORD):
-                self.bot.larva.first.train(UnitID.OVERLORD)
+            self.bot.register_behavior(AutoSupply(self.bot.start_location))
+            # if self.need_overlord and self.bot.can_afford(UnitID.OVERLORD):
+            #     self.bot.larva.first.train(UnitID.OVERLORD)
             # build workers
             if self.bot.supply_left >= 1 and self.bot.minerals < 800:
                 max_workers: int = 38 if self.bot.townhalls.amount <= 2 else 65
@@ -191,7 +193,9 @@ class ProductionManager(Manager):
 
     async def _morph_core_structures(self) -> None:
         building_counter: dict[UnitID, int] = self.bot.mediator.get_building_counter
-        own_structures_dict: dict[UnitID, Units] = self.bot.mediator.get_own_structures_dict
+        own_structures_dict: dict[
+            UnitID, Units
+        ] = self.bot.mediator.get_own_structures_dict
         # spawning pool
         if (
             len(self.unit_manager.worker_defence_tags) == 0
@@ -210,13 +214,9 @@ class ProductionManager(Manager):
                 )
 
         # expand
-        can_expand: bool = (
-            False if self._chosen_opening == "SAFE" and self.bot.time < 300.0 else True
-        )
         if (
             self.bot.can_afford(UnitID.HATCHERY)
-            and can_expand
-            and UnitID.HATCHERY not in self.bot.mediator.get_building_counter
+            and self.bot.mediator.get_building_counter[UnitID.HATCHERY] == 0
         ):
             if location := await self.bot.get_next_expansion():
                 await self._build_structure(

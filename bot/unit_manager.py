@@ -5,7 +5,7 @@ from ares.consts import UnitRole
 from ares.cython_extensions.combat_utils import cy_attack_ready, cy_pick_enemy_target
 from ares.cython_extensions.geometry import cy_distance_to
 from ares.cython_extensions.units_utils import cy_closest_to, cy_in_attack_range
-from MapAnalyzer import MapData
+from map_analyzer import MapData
 from queens_sc2.consts import QueenRoles
 from queens_sc2.queens import Queens
 from sc2.data import Race
@@ -45,11 +45,11 @@ class UnitManager(Manager):
         self.worker_scout_tag: int = 0
         self.issued_scout_command: bool = False
         self.switched_queen_policy: bool = False
+        self.switched_policy_due_to_rush: bool = False
 
         self.nydus_overseer_tag: int = 0
         self.creep_queen_dropperlord_tags: Set[int] = set()
         self.cancelled_structures: bool = False
-        self.ground_grid: Optional[np.ndarray] = None
         self.sent_second_overlord: bool = False
 
         self.offensive: bool = False
@@ -64,7 +64,7 @@ class UnitManager(Manager):
                 "first_tumor_position": self.terrain_manager.natural_location.towards(
                     self.bot.game_info.map_center, 9
                 ),
-                "priority": True,
+                "priority": False,
                 "prioritize_creep": lambda: True,
                 "max": 1,
                 "defend_against_ground": True,
@@ -87,6 +87,7 @@ class UnitManager(Manager):
             "defence_queens": {
                 "attack_condition": lambda: self.offensive,
                 "pass_own_threats": True,
+                "priority": 2,
                 "rally_point": self.terrain_manager.natural_location,
             },
             "inject_queens": {"active": False},
@@ -194,7 +195,7 @@ class UnitManager(Manager):
             return
 
         queens: Units = self.bot.mediator.get_own_army_dict[UnitID.QUEEN]
-        num_queens: int = queens.amount
+        num_queens: int = len(queens)
         if num_queens < 6:
             self.offensive = False
             return
@@ -226,15 +227,16 @@ class UnitManager(Manager):
         # call the queen library to handle our queens
         if hasattr(self, "queens"):
             # get a new ground grid at certain invervals since it updates pathable areas
-            if self.ground_grid is None or iteration % 32 == 0:
-                self.ground_grid = self.map_data.get_pyastar_grid()
+            if iteration % 32 == 0:
                 # update desired creep paths
                 self._update_creep_paths()
 
             await self.queens.manage_queens(
                 iteration,
                 creep_queen_dropperlord_tags=self.creep_queen_dropperlord_tags,
-                grid=self.ground_grid,
+                grid=self.bot.mediator.get_ground_grid,
+                air_grid=self.bot.mediator.get_air_grid,
+                avoidance_grid=self.bot.mediator.get_ground_avoidance_grid,
                 # these are optional, but prevents `queens-sc2` calculating them
                 # since `ares` already does it :)
                 ground_threats_near_bases=self.bot.mediator.get_main_ground_threats_near_townhall,
@@ -355,9 +357,6 @@ class UnitManager(Manager):
 
     async def _handle_worker_rush(self) -> None:
         """zerglings too !"""
-        # got to a point in time we don't care about this anymore, hopefully there are Queens around
-        if self.bot.time > 200.0 and not self.enemy_committed_worker_rush:
-            return
 
         def stack_detected(_enemy_workers: Units) -> bool:
             if (
@@ -405,16 +404,28 @@ class UnitManager(Manager):
             workers_needed: int = (
                 num_enemy_workers
                 if num_enemy_workers <= 6 and enemy_lings.amount <= 3
-                else self.bot.workers.amount
+                else self.bot.workers.amount - 2
             )
             if len(self.worker_defence_tags) < workers_needed:
                 workers_to_take: int = workers_needed - len(self.worker_defence_tags)
-                for _ in range(workers_to_take):
-                    if worker := self.bot.mediator.select_worker(
-                        target_position=self.bot.start_location
-                    ):
-                        self.bot.mediator.assign_role(
-                            tag=worker.tag, role=UnitRole.DEFENDING
+                if (
+                    available_workers := self.bot.mediator.get_units_from_role(
+                        role=UnitRole.GATHERING
+                    )
+                    .filter(
+                        lambda u: not u.is_carrying_resource
+                        and u.health_percentage > 0.5
+                    )
+                    .take(workers_to_take)
+                ):
+                    self.bot.mediator.batch_assign_role(
+                        tags=available_workers.tags,
+                        role=UnitRole.DEFENDING,
+                    )
+                    # remove from mining, otherwise can't assign new workers to min field
+                    for worker in available_workers:
+                        self.bot.mediator.remove_worker_from_mineral(
+                            worker_tag=worker.tag
                         )
                         self.worker_defence_tags.append(worker.tag)
 
@@ -429,7 +440,7 @@ class UnitManager(Manager):
             )
             if defence_workers and all_enemy_workers:
                 for worker in defence_workers:
-                    if worker.health_percentage < 0.2:
+                    if worker.health_percentage < 0.3:
                         worker.gather(
                             self.bot.mineral_field.closest_to(self.bot.start_location)
                         )
@@ -442,12 +453,14 @@ class UnitManager(Manager):
                     in_range_target: Optional[Unit] = None
                     if in_attack_range:
                         in_range_target = cy_pick_enemy_target(in_attack_range)
-                    closest_enemy: Unit = cy_closest_to(worker.position, all_enemy_workers)
+                    closest_enemy: Unit = cy_closest_to(
+                        worker.position, all_enemy_workers
+                    )
                     if (
                         all_enemy_workers
-                        and all_enemy_workers.closest_to(close_mineral_patch).distance_to(
+                        and all_enemy_workers.closest_to(
                             close_mineral_patch
-                        )
+                        ).distance_to(close_mineral_patch)
                         > 2
                         and stack_detected(all_enemy_workers)
                     ):
@@ -466,7 +479,7 @@ class UnitManager(Manager):
             elif (
                 self.enemy_committed_worker_rush
                 and defence_workers
-                and self.bot.enemy_race != Race.Terran
+                and self.bot.enemy_race == Race.Protoss
             ):
                 for worker in defence_workers:
                     if worker.weapon_cooldown == 0:
@@ -478,6 +491,10 @@ class UnitManager(Manager):
                     self.assign_drone_back_to_gathering(worker.tag)
                     worker.gather(close_mineral_patch)
                 self.worker_defence_tags = []
+        elif len(self.worker_defence_tags) > 0:
+            for tag in self.worker_defence_tags:
+                self.assign_drone_back_to_gathering(tag)
+            self.worker_defence_tags = []
 
     async def _handle_worker_scout(self) -> None:
         if self.worker_scout_tag == 0:
@@ -587,6 +604,13 @@ class UnitManager(Manager):
                 return overlord.tag
 
     def _manage_queen_policy(self, iteration: int) -> None:
+        if self.bot.time < 210.0 and not self.switched_policy_due_to_rush:
+            if self.bot.mediator.get_main_ground_threats_near_townhall(UnitID.ZERGLING):
+                self.queens.set_new_policy(
+                    self.defensive_queen_policy, reset_roles=True
+                )
+                self.switched_policy_due_to_rush = True
+
         if not self.switched_queen_policy and self.bot.time > 420:
             self.switched_queen_policy = True
             self.queens.set_new_policy(self.mid_game_queen_policy, reset_roles=True)
