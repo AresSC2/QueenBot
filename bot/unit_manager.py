@@ -2,9 +2,13 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 import numpy as np
 from ares.consts import UnitRole
-from ares.cython_extensions.combat_utils import cy_attack_ready, cy_pick_enemy_target
-from ares.cython_extensions.geometry import cy_distance_to
-from ares.cython_extensions.units_utils import cy_closest_to, cy_in_attack_range
+from cython_extensions import (
+    cy_attack_ready,
+    cy_closest_to,
+    cy_distance_to,
+    cy_in_attack_range,
+    cy_pick_enemy_target,
+)
 from map_analyzer import MapData
 from queens_sc2.consts import QueenRoles
 from queens_sc2.queens import Queens

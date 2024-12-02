@@ -3,9 +3,7 @@ from typing import List
 from ares import AresBot
 from ares.behaviors.macro import AutoSupply, SpawnController
 from ares.consts import UnitRole
-from ares.cython_extensions.general_utils import cy_unit_pending
-from ares.cython_extensions.geometry import cy_towards, cy_distance_to
-from ares.cython_extensions.units_utils import cy_closest_to
+from cython_extensions import cy_closest_to, cy_distance_to, cy_towards, cy_unit_pending
 from sc2.ids.ability_id import AbilityId
 from sc2.ids.unit_typeid import UnitTypeId as UnitID
 from sc2.ids.upgrade_id import UpgradeId
@@ -116,7 +114,9 @@ class ProductionManager(Manager):
         await self._upgrade_townhalls(idle_townhalls)
         await self._manage_upgrades()
 
-        self.bot.register_behavior(SpawnController({UnitID.QUEEN: {"proportion": 1.0, "priority": 0}}))
+        self.bot.register_behavior(
+            SpawnController({UnitID.QUEEN: {"proportion": 1.0, "priority": 0}})
+        )
 
         await self._morph_core_structures()
 
