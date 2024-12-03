@@ -17,5 +17,9 @@ requests = "^2.32.3"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.black]
+extend-exclude = 'ares-sc2/*'
+
 [tool.isort]
 profile = "black"
+skip_glob = ["ares-sc2/*"]
