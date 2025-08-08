@@ -1,20 +1,31 @@
 from typing import Optional
 
+from sc2.position import Point2
+from sc2.units import Units
+
 from ares import AresBot
-from ares.behaviors.macro import Mining
+from ares.behaviors.combat.individual.queen_spread_creep import QueenSpreadCreep
+from ares.behaviors.combat.individual.tumor_spread_creep import TumorSpreadCreep
+from ares.behaviors.macro import (
+    Mining,
+    ProductionController,
+    MacroPlan,
+    AutoSupply,
+    BuildWorkers,
+)
+from ares.consts import UnitRole, CREEP_TUMOR_TYPES
 from sc2.ids.ability_id import AbilityId
 from sc2.ids.unit_typeid import UnitTypeId as UnitID
+from sc2.ids.upgrade_id import UpgradeId
 from sc2.unit import Unit
 
-from bot.production_manager import ProductionManager
-from bot.terrain_manager import TerrainManager
-from bot.unit_manager import UnitManager
+from bot.macro_manager import MacroManager
+from bot.queen_manager import QueenManager
 
 
 class MyBot(AresBot):
-    production_manager: ProductionManager
-    unit_manager: UnitManager
-    terrain_manager: TerrainManager
+    macro_manager: MacroManager
+    queen_manager: QueenManager
 
     def __init__(self, game_step_override: Optional[int] = None):
         """Initiate custom bot
@@ -26,26 +37,37 @@ class MyBot(AresBot):
             specified elsewhere
         """
         super().__init__(game_step_override)
-        self.unselectable_worker_tags = set()
         self.sent_bm: bool = False
 
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
 
         self.register_behavior(Mining())
+        self.macro_manager.update()
+        self.queen_manager.update()
 
-        await self.terrain_manager.update(iteration)
-        await self.unit_manager.update(iteration)
-        await self.production_manager.update(iteration)
+        ols: Units = self.mediator.get_units_from_role(role=UnitRole.OVERLORD_CREEP_SPOTTER)
 
-        if (
-            hasattr(self.unit_manager, "queens")
-            and not self.sent_bm
-            and self.unit_manager.queens.creep.creep_coverage > 85.0
-        ):
-            await self.chat_send("That's over 85% of the map covered in creep")
-            await self.chat_send("How did you let that happen?!")
-            self.sent_bm = True
+        spotter_positions: dict[int, Point2] = self.mediator.get_overlord_creep_spotter_positions(overlords=ols, target_pos=self.enemy_start_locations[0])
+
+        for ol in ols:
+            if AbilityId.BEHAVIOR_GENERATECREEPON in ol.abilities:
+                ol(AbilityId.BEHAVIOR_GENERATECREEPON)
+            elif ol.tag in spotter_positions:
+                ol.move(spotter_positions[ol.tag])
+
+        for tumor in self.structures(CREEP_TUMOR_TYPES):
+            self.register_behavior(TumorSpreadCreep(tumor, self.enemy_start_locations[0]))
+
+
+        # if (
+        #     hasattr(self.unit_manager, "queens")
+        #     and not self.sent_bm
+        #     and self.unit_manager.queens.creep.creep_coverage > 85.0
+        # ):
+        #     await self.chat_send("That's over 85% of the map covered in creep")
+        #     await self.chat_send("How did you let that happen?!")
+        #     self.sent_bm = True
 
     """
     Can use `python-sc2` hooks as usual, but make a call the inherited method in the superclass
@@ -54,28 +76,19 @@ class MyBot(AresBot):
 
     async def on_start(self) -> None:
         await super(MyBot, self).on_start()
+        self.macro_manager = MacroManager(self)
+        self.queen_manager = QueenManager(self)
 
-        self.terrain_manager = TerrainManager(self)
-        self.unit_manager = UnitManager(self, self.terrain_manager)
-        self.production_manager = ProductionManager(
-            self, self.terrain_manager, self.unit_manager
-        )
+        for unit in self.units(UnitID.OVERLORD):
+            self.mediator.assign_role(tag=unit.tag, role=UnitRole.OVERLORD_CREEP_SPOTTER)
 
     async def on_unit_created(self, unit: Unit) -> None:
         await super(MyBot, self).on_unit_created(unit)
-
-        if unit.type_id == UnitID.OVERLORD and self.time > 10.0:
-            self.unit_manager.handle_overlord(unit)
+        if unit.type_id == UnitID.OVERLORD:
+            self.mediator.assign_role(tag=unit.tag, role=UnitRole.OVERLORD_CREEP_SPOTTER)
 
     async def on_unit_destroyed(self, unit_tag: int) -> None:
         await super(MyBot, self).on_unit_destroyed(unit_tag)
-
-        # checks if unit is a queen or th, lib then handles appropriately
-        self.unit_manager.queens.remove_unit(unit_tag)
-        if unit_tag in self.unit_manager.worker_defence_tags:
-            self.unit_manager.worker_defence_tags.remove(unit_tag)
-        if unit_tag in self.unit_manager.bunker_drone_tags:
-            self.unit_manager.bunker_drone_tags.remove(unit_tag)
 
     async def on_unit_took_damage(self, unit: Unit, amount_damage_taken: float) -> None:
         await super(MyBot, self).on_unit_took_damage(unit, amount_damage_taken)

@@ -57,17 +57,21 @@ Builds:
             - 13 drone
             - 14 drone
             - 15 drone
+            - 16 expand
+            - 15 drone
             - 16 drone
-            - 17 expand
+            - 17 drone
+            - 18 spawningpool
             - 16 drone
             - 17 drone
             - 18 drone
-            - 19 spawningpool
-            - 18 drone
+            - 17 overlord
+            - 15 gas
 
     Greed:
         # Build constant workers till x supply
         ConstantWorkerProductionTill: 0
+        ShouldHandleGasSteal: False
         OpeningBuildOrder:
             - 12 drone
             - 13 overlord
@@ -78,13 +82,10 @@ Builds:
             - 17 expand
             - 16 drone
             - 17 drone
+            - 18 expand
+            - 17 drone
             - 18 drone
             - 19 expand
             - 18 drone
-            - 19 drone
-            - 20 expand
-            - 19 drone
-            - 20 drone
-            - 21 drone
-            - 21 spawningpool
+            - 16 spawningpool
 
