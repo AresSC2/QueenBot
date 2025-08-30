@@ -86,10 +86,10 @@ def main():
             # "Oceanborn513AIE",
             # "SiteDelta513AIE"
             # "Ephemeron-1vs3-AIE_Insane"
-            "PylonAIE_v2"
-            "PersephoneAIE_v2"
-            "TorchesAIE_v2",
-            "IncorporealAIE_v2"
+            "PylonAIE_v4",
+            "PersephoneAIE_v4",
+            "TorchesAIE_v4",
+            "IncorporealAIE_v4",
         ]
 
         random_race = random.choice([Race.Zerg, Race.Terran, Race.Protoss])
@@ -98,7 +98,7 @@ def main():
             maps.get(random.choice(map_list)),
             [
                 bot1,
-                Computer(random_race, Difficulty.CheatInsane, ai_build=AIBuild.Macro),
+                Computer(Race.Zerg, Difficulty.CheatInsane, ai_build=AIBuild.Macro),
             ],
             realtime=False,
         )
