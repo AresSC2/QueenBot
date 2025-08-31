@@ -122,7 +122,7 @@ class MacroManager:
             macro_plan.add(
                 TechUp(desired_tech=UnitID.LAIR, base_location=self.ai.start_location)
             )
-        if self.ai.supply_workers > 60:
+        if self.ai.supply_used > 170.0:
             macro_plan.add(
                 TechUp(desired_tech=UnitID.HIVE, base_location=self.ai.start_location)
             )

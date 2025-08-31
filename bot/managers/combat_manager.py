@@ -92,7 +92,10 @@ class CombatManager:
         if num_queens == 0:
             return
 
-        if self.ai.mediator.get_units_from_role(role=UnitRole.QUEEN_NYDUS):
+        if (
+            self.ai.mediator.get_creep_coverage > 52.0
+            and self.ai.mediator.get_units_from_role(role=UnitRole.QUEEN_NYDUS)
+        ):
             self._should_be_aggressive = True
             return
 

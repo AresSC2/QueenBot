@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 from cython_extensions.units_utils import cy_closest_to
 from loguru import logger
+from sc2.data import Race
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.unit import Unit
 from sc2.units import Units
@@ -25,6 +26,27 @@ class QueenRoleController:
 
     @property_cache_once_per_frame
     def required_creep_spreaders(self) -> int:
+        if self.ai.mediator.get_creep_coverage > 70.0:
+            return 0
+
+        if (
+            self.ai.mediator.get_main_ground_threats_near_townhall
+            and self.ai.get_total_supply(
+                self.ai.mediator.get_main_ground_threats_near_townhall
+            )
+            >= 4.0
+        ):
+            return 0
+
+        if (
+            self.ai.mediator.get_main_air_threats_near_townhall
+            and self.ai.get_total_supply(
+                self.ai.mediator.get_main_air_threats_near_townhall
+            )
+            >= 6.0
+        ):
+            return 0
+
         num_queens: int = len(self.ai.mediator.get_own_army_dict[UnitTypeId.QUEEN])
         known_enemy_supply: float = self.ai.get_total_supply(
             self.ai.mediator.get_cached_enemy_army
@@ -32,14 +54,16 @@ class QueenRoleController:
         if (
             known_enemy_supply / 0.8
         ) > num_queens * 2 or self.ai.mediator.get_did_enemy_rush:
-            if num_queens > 12:
+            if num_queens > 12 or (
+                self.ai.enemy_race == Race.Zerg and self.ai.mediator.get_enemy_expanded
+            ):
                 return 1
             else:
                 return 0
         elif self.aggressive:
             return 1
 
-        return 4
+        return 5
 
     @property_cache_once_per_frame
     def required_defenders(self) -> int:

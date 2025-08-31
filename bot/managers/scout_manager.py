@@ -3,9 +3,10 @@ from typing import TYPE_CHECKING, List, Optional, Set
 import numpy as np
 from cython_extensions.general_utils import cy_unit_pending
 from cython_extensions.units_utils import cy_find_units_center_mass
+from sc2.game_info import Ramp
 
 from ares.behaviors.combat import CombatManeuver
-from ares.behaviors.combat.individual import KeepUnitSafe, PathUnitToTarget
+from ares.behaviors.combat.individual import KeepUnitSafe, PathUnitToTarget, UseAbility
 from ares.consts import UnitRole
 from cython_extensions import (
     cy_attack_ready,
@@ -34,6 +35,7 @@ MELEE_TYPES: set[UnitID] = {UnitID.DRONE, UnitID.PROBE, UnitID.SCV, UnitID.ZERGL
 
 class ScoutManager:
     queen_bot_mediator: QueenBotMediator
+    initial_ol_spot: Point2
 
     def __init__(
         self,
@@ -48,8 +50,13 @@ class ScoutManager:
         self.nydus_overseer_tag: int = 0
         self.creep_queen_dropperlord_tags: Set[int] = set()
         self.cancelled_structures: bool = False
+        self._sack_drone_scout: bool = False
+        self._first_iteration: bool = True
 
     def update(self) -> None:
+        if self._first_iteration:
+            self.initial_ol_spot = self._calculate_first_ol_spot()
+            self._first_iteration = False
         overlords: Units = self.ai.mediator.get_own_army_dict[UnitID.OVERLORD]
 
         # self._morph_dropperlord(overlords)
@@ -58,6 +65,37 @@ class ScoutManager:
             self._handle_worker_scout()
         self._manager_overseer(overlords)
         self._handle_nydus_overseer(overlords)
+
+        if self.ai.time > 180 and not self._sack_drone_scout:
+            if worker := self.ai.mediator.select_worker(
+                target_position=self.ai.mediator.get_own_nat
+            ):
+                self.ai.mediator.assign_role(tag=worker.tag, role=UnitRole.SCOUTING)
+                self._sack_drone_scout = True
+                ramp: Ramp = self.ai.mediator.get_enemy_ramp
+                move_to: Point2 = Point2(
+                    cy_towards(ramp.top_center, ramp.bottom_center, 2)
+                )
+                worker.move(move_to)
+
+        if (
+            self.ai.build_order_runner.build_completed
+            and self.ai.time > 120.0
+            and (
+                overlords := self.ai.mediator.get_units_from_role(
+                    role=UnitRole.BUILD_RUNNER_SCOUT, unit_type=UnitID.OVERLORD
+                )
+            )
+        ):
+            for ol in overlords:
+                maneuver: CombatManeuver = CombatManeuver()
+                maneuver.add(KeepUnitSafe(ol, self.ai.mediator.get_air_grid))
+                maneuver.add(
+                    PathUnitToTarget(
+                        ol, self.ai.mediator.get_air_grid, self.initial_ol_spot
+                    )
+                )
+                self.ai.register_behavior(maneuver)
 
     def assign_drone_back_to_gathering(self, drone_tag: int) -> None:
         self.ai.mediator.assign_role(tag=drone_tag, role=UnitRole.GATHERING)
@@ -128,7 +166,10 @@ class ScoutManager:
                 self.ai.register_behavior(spotter_maneuver)
 
     def _manager_overseer(self, overlords: Units) -> None:
-        overseers: Units = self.ai.units.filter(lambda u: u.tag == self.overseer_tag)
+        overseers: Units = self.ai.mediator.get_units_from_role(
+            role=UnitRole.ATTACKING_MAIN_SQUAD, unit_type=UnitID.OVERSEER
+        )
+
         if not overseers:
             new_tag: Optional[int] = self._morph_overseer(overlords)
             if new_tag and new_tag != self.nydus_overseer_tag:
@@ -138,7 +179,9 @@ class ScoutManager:
                 )
 
         else:
-            force: Units = self.ai.mediator.get_own_army
+            force: Units = self.ai.mediator.get_units_from_roles(
+                roles={UnitRole.QUEEN_DEFENCE, UnitRole.QUEEN_OFFENSIVE}
+            )
             if force:
                 center, _ = cy_find_units_center_mass(force, 12.5)
                 position: Point2 = Point2(center)
@@ -192,3 +235,24 @@ class ScoutManager:
                 overlord: Unit = cy_closest_to(self.ai.start_location, overlords)
                 overlord(AbilityId.MORPH_OVERSEER, subtract_cost=True)
                 return overlord.tag
+
+    def _calculate_first_ol_spot(self):
+        if self.ai.enemy_race == Race.Zerg:
+            if path := self.ai.mediator.find_raw_path(
+                start=self.ai.mediator.get_enemy_nat,
+                target=self.ai.game_info.map_center,
+                grid=self.ai.mediator.get_ground_grid,
+                sensitivity=8,
+            ):
+                if len(path) >= 3:
+                    return path[2]
+
+        return self.ai.mediator.get_closest_overlord_spot(
+            from_pos=Point2(
+                cy_towards(
+                    self.ai.mediator.get_enemy_nat,
+                    self.ai.game_info.map_center,
+                    10.0,
+                )
+            )
+        )

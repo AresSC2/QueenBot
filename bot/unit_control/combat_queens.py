@@ -113,13 +113,21 @@ class CombatQueens(BaseControl):
             maneuver.add(ShootTargetInRange(queen, near_enemy))
             if near_enemy:
                 if can_engage and can_fight:
+                    tanks: list[Unit] = [
+                        u
+                        for u in only_enemy_units
+                        if u.type_id in {UnitID.SIEGETANKSIEGED}
+                    ]
                     if only_enemy_units:
                         closest_enemy: Unit = cy_closest_to(queen_pos, only_enemy_units)
                     else:
                         closest_enemy: Unit = cy_closest_to(queen_pos, near_enemy)
-                    if (
-                        closest_enemy.can_attack_ground
-                        and closest_enemy.ground_range < 4
+                    if not tanks and (
+                        self.ai.has_creep(queen_pos)
+                        or (
+                            closest_enemy.can_attack_ground
+                            and closest_enemy.ground_range < 4
+                        )
                     ):
                         maneuver.add(StutterUnitBack(queen, closest_enemy))
                     else:

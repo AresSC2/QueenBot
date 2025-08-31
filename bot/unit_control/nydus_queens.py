@@ -78,7 +78,7 @@ class NydusQueens(BaseControl):
                 if networks and len(canals) == 0:
                     target = cy_closest_to(squad_pos, networks).position
                 QueensMovement(self.ai, self.config, self.mediator).execute(
-                    units, target=target, exit_nydus_max_influence=10.0
+                    units, target=target, exit_nydus_max_influence=22.0
                 )
             else:
                 QueensMovement(self.ai, self.config, self.mediator).execute(

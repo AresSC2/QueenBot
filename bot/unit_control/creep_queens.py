@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Union
 
 import numpy as np
+from sc2.data import Race
 from sc2.position import Point2
 from sc2.unit import Unit
 from sc2.units import Units
@@ -48,7 +49,11 @@ class CreepQueens(BaseControl):
         target: Point2 = (
             self.mediator.get_defensive_third
             if self.ai.time < 165.0
-            else self.ai.mediator.get_enemy_nat
+            else (
+                self.ai.mediator.get_enemy_third
+                if self.ai.enemy_race != Race.Zerg
+                else self.ai.mediator.get_enemy_third
+            )
         )
         for queen in units:
             maneuver: CombatManeuver = CombatManeuver()
