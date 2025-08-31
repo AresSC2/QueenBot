@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Set
 
 from sc2.ids.unit_typeid import UnitTypeId as UnitID
@@ -17,6 +18,14 @@ ATTACK_TARGET_IGNORE: Set[UnitID] = {
     UnitID.CHANGELINGZERGLINGWINGS,
     UnitID.REAPER,
 }
+COMMON_UNIT_IGNORE_TYPES: set[UnitID] = {
+    UnitID.EGG,
+    UnitID.LARVA,
+    UnitID.CREEPTUMORBURROWED,
+    UnitID.CREEPTUMORQUEEN,
+    UnitID.CREEPTUMOR,
+    UnitID.MULE,
+}
 PROXY_STATIC_DEFENCE: Set[UnitID] = {
     UnitID.BUNKER,
     UnitID.SPINECRAWLER,
@@ -24,3 +33,13 @@ PROXY_STATIC_DEFENCE: Set[UnitID] = {
     UnitID.COMMANDCENTER,
     UnitID.PHOTONCANNON,
 }
+
+
+class RequestType(str, Enum):
+    # combat manager
+    GET_ATTACK_TARGET = "GET_ATTACK_TARGET"
+    GET_SHOULD_BE_AGGRESSIVE = "GET_SHOULD_BE_AGGRESSIVE"
+
+    # nydus manager
+    GET_CURRENT_CANAL_TARGET = "GET_CURRENT_CANAL_TARGET"
+    GET_CURRENT_NYDUS_TARGET = "GET_CURRENT_NYDUS_TARGET"
