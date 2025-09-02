@@ -1,30 +1,20 @@
-from typing import TYPE_CHECKING, List, Optional, Set
+from typing import TYPE_CHECKING, Optional, Set
 
 import numpy as np
+from ares.behaviors.combat import CombatManeuver
+from ares.behaviors.combat.individual import KeepUnitSafe, PathUnitToTarget
+from ares.consts import UnitRole
+from cython_extensions import cy_closest_to, cy_distance_to, cy_towards
 from cython_extensions.general_utils import cy_unit_pending
 from cython_extensions.units_utils import cy_find_units_center_mass
-from sc2.game_info import Ramp
-
-from ares.behaviors.combat import CombatManeuver
-from ares.behaviors.combat.individual import KeepUnitSafe, PathUnitToTarget, UseAbility
-from ares.consts import UnitRole
-from cython_extensions import (
-    cy_attack_ready,
-    cy_closest_to,
-    cy_distance_to,
-    cy_in_attack_range,
-    cy_pick_enemy_target,
-    cy_distance_to_squared,
-    cy_towards,
-)
 from sc2.data import Race
+from sc2.game_info import Ramp
 from sc2.ids.ability_id import AbilityId
 from sc2.ids.unit_typeid import UnitTypeId as UnitID
 from sc2.position import Point2
 from sc2.unit import Unit
 from sc2.units import Units
 
-from bot.consts import PROXY_STATIC_DEFENCE
 from bot.managers.queen_bot_mediator import QueenBotMediator
 
 if TYPE_CHECKING:
@@ -66,7 +56,7 @@ class ScoutManager:
         self._manager_overseer(overlords)
         self._handle_nydus_overseer(overlords)
 
-        if self.ai.time > 180 and not self._sack_drone_scout:
+        if self.ai.time > 190.0 and not self._sack_drone_scout:
             if worker := self.ai.mediator.select_worker(
                 target_position=self.ai.mediator.get_own_nat
             ):

@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, Protocol, Union
 
 from ares.managers.manager_mediator import ManagerMediator
-
 from sc2.unit import Unit
 from sc2.units import Units
 

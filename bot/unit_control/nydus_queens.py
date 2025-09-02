@@ -1,23 +1,20 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Union
 
+from ares.managers.manager_mediator import ManagerMediator
 from cython_extensions.geometry import cy_distance_to_squared
 from cython_extensions.units_utils import cy_closest_to
-
 from sc2.ids.unit_typeid import UnitTypeId as UnitID
 from sc2.position import Point2
 from sc2.unit import Unit
 from sc2.units import Units
 
-from bot.unit_control.combat_queens import CombatQueens
-
-from ares.managers.manager_mediator import ManagerMediator
-
 from bot.unit_control.base_control import BaseControl
+from bot.unit_control.combat_queens import CombatQueens
 from bot.unit_control.queens_movement import QueensMovement
 
 if TYPE_CHECKING:
-    from ares import AresBot, UnitTreeQueryType
+    from ares import AresBot
 
 
 @dataclass

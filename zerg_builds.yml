@@ -50,10 +50,13 @@ Builds:
             - 13 cancel_gas
             - 13 drone
             - 13 spawningpool
-            - 13 drone *4
-            - 13 expand
+            - 13 drone *5
+            - 13 overlord
             - 13 queen *2
-            - 13 drone *2
+            - 13 gas
+            - 13 drone *4
+            - 13 overlord
+            - 13 queen *2
 
     Greed:
         # Build constant workers till x supply

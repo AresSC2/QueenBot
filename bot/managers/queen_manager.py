@@ -1,21 +1,20 @@
-from typing import Callable, Any
+from typing import Any, Callable
 
+from ares import AresBot, UnitTreeQueryType
+from ares.consts import VICTORY_MARGINAL_OR_BETTER, UnitRole
+from ares.managers.squad_manager import UnitSquad
 from cython_extensions.geometry import cy_towards
 from cython_extensions.units_utils import cy_center
 from sc2.position import Point2
 from sc2.unit import Unit
 from sc2.units import Units
 
-from ares import AresBot, UnitTreeQueryType
-from ares.consts import UnitRole, VICTORY_MARGINAL_OR_BETTER
-from ares.managers.squad_manager import UnitSquad
 from bot.consts import RequestType
 from bot.managers.queen_bot_mediator import QueenBotMediator
+from bot.managers.queen_role_controller import QueenRoleController
+from bot.unit_control.base_control import BaseControl
 from bot.unit_control.combat_queens import CombatQueens
 from bot.unit_control.creep_queens import CreepQueens
-
-from bot.unit_control.base_control import BaseControl
-from bot.managers.queen_role_controller import QueenRoleController
 from bot.unit_control.inject_queens import InjectQueens
 from bot.unit_control.nydus_queens import NydusQueens
 
@@ -119,25 +118,29 @@ class QueenManager:
             or main_ground_threats
             or main_air_threats
         )
-        defensive_target: Point2 = Point2(
-            cy_towards(self.ai.mediator.get_own_nat, self.ai.game_info.map_center, 5.9)
-        )
-        if main_ground_threats:
-            defensive_target = Point2(cy_center(main_ground_threats))
-        elif main_air_threats:
-            defensive_target = Point2(cy_center(main_air_threats))
-        self._combat_queens_control.execute(
-            defensive_queens, target=defensive_target, can_engage=can_engage
-        )
 
-        if offensive_queens:
-            attack_target: Point2 = self.queen_bot_mediator.get_attack_target
+        if defensive_queens:
+            attack_target: Point2
+            aggressive: bool = self.queen_bot_mediator.get_should_be_aggressive
+            if aggressive:
+                attack_target = self.queen_bot_mediator.get_attack_target
+            else:
+                attack_target: Point2 = Point2(
+                    cy_towards(
+                        self.ai.mediator.get_own_nat, self.ai.game_info.map_center, 5.9
+                    )
+                )
+                if main_ground_threats:
+                    attack_target = Point2(cy_center(main_ground_threats))
+                elif main_air_threats:
+                    attack_target = Point2(cy_center(main_air_threats))
+
             squads: list[UnitSquad] = self.ai.mediator.get_squads(
-                role=UnitRole.QUEEN_OFFENSIVE, squad_radius=9.0
+                role=UnitRole.QUEEN_DEFENCE, squad_radius=9.0
             )
             if len(squads) > 0:
                 pos_of_main_squad: Point2 = self.ai.mediator.get_position_of_main_squad(
-                    role=UnitRole.QUEEN_OFFENSIVE
+                    role=UnitRole.QUEEN_DEFENCE
                 )
                 for squad in squads:
                     _target: Point2 = (
@@ -145,9 +148,9 @@ class QueenManager:
                     )
                     self._combat_queens_control.execute(
                         squad.squad_units,
-                        target=self.queen_bot_mediator.get_attack_target,
+                        target=attack_target,
                         can_engage=can_engage,
-                        check_close_combat_result=True,
+                        check_close_combat_result=aggressive,
                     )
 
         if nydus_queens:

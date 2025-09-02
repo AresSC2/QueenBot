@@ -1,5 +1,6 @@
-from typing import TYPE_CHECKING, List, Any
+from typing import TYPE_CHECKING, Any, List
 
+from ares.consts import DEBUG, TOWNHALL_TYPES_NO_PF, UnitTreeQueryType
 from cython_extensions.geometry import cy_distance_to_squared
 from cython_extensions.units_utils import cy_find_units_center_mass
 from sc2.ids.ability_id import AbilityId
@@ -8,7 +9,6 @@ from sc2.position import Point2
 from sc2.unit import Unit
 from sc2.units import Units
 
-from ares.consts import TOWNHALL_TYPES_NO_PF, UnitTreeQueryType, DEBUG
 from bot.consts import RequestType
 from bot.managers.queen_bot_mediator import QueenBotMediator
 
@@ -133,7 +133,13 @@ class NydusManager:
                 placement = await self.ai.find_placement(
                     UnitID.NYDUSCANAL, location, 3, False, 1
                 )
-                if placement and self.ai.is_visible(placement):
+                if (
+                    placement
+                    and self.ai.is_visible(placement)
+                    and self.ai.mediator.is_position_safe(
+                        grid=self.ai.mediator.get_ground_grid, position=placement
+                    )
+                ):
                     network(AbilityId.BUILD_NYDUSWORM, placement)
 
     async def _build_reinforcement_canals(self) -> None:

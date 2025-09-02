@@ -1,19 +1,19 @@
-from typing import Callable, Any
-
-from cython_extensions.units_utils import cy_find_units_center_mass, cy_closest_to
-from loguru import logger
-from sc2.position import Point2
-from sc2.units import Units
-from sc2.ids.unit_typeid import UnitTypeId as UnitID
+from typing import Any, Callable
 
 from ares import AresBot
 from ares.consts import (
-    EngagementResult,
     LOSS_DECISIVE_OR_WORSE,
     VICTORY_CLOSE_OR_BETTER,
+    EngagementResult,
     UnitRole,
 )
-from bot.consts import RequestType, ATTACK_TARGET_IGNORE
+from cython_extensions.units_utils import cy_closest_to, cy_find_units_center_mass
+from loguru import logger
+from sc2.ids.unit_typeid import UnitTypeId as UnitID
+from sc2.position import Point2
+from sc2.units import Units
+
+from bot.consts import ATTACK_TARGET_IGNORE, RequestType
 from bot.managers.queen_bot_mediator import QueenBotMediator
 
 

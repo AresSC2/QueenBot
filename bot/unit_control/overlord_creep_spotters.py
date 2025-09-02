@@ -2,19 +2,13 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Union
 
 import numpy as np
+from ares.behaviors.combat import CombatManeuver
+from ares.behaviors.combat.individual import KeepUnitSafe, UseAbility
+from ares.managers.manager_mediator import ManagerMediator
 from sc2.ids.ability_id import AbilityId
 from sc2.position import Point2
 from sc2.unit import Unit
 from sc2.units import Units
-
-from ares.behaviors.combat.individual import (
-    KeepUnitSafe,
-    ShootTargetInRange,
-    UseAbility,
-)
-from ares.behaviors.combat.individual.queen_spread_creep import QueenSpreadCreep
-from ares.behaviors.combat import CombatManeuver
-from ares.managers.manager_mediator import ManagerMediator
 
 from bot.unit_control.base_control import BaseControl
 

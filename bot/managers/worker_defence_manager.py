@@ -1,25 +1,17 @@
 from typing import TYPE_CHECKING, List, Optional, Set
 
-import numpy as np
-from cython_extensions.general_utils import cy_unit_pending
-from cython_extensions.units_utils import cy_find_units_center_mass
-
-from ares.behaviors.combat import CombatManeuver
-from ares.behaviors.combat.individual import KeepUnitSafe, PathUnitToTarget
 from ares.consts import UnitRole
 from cython_extensions import (
     cy_attack_ready,
     cy_closest_to,
     cy_distance_to,
+    cy_distance_to_squared,
     cy_in_attack_range,
     cy_pick_enemy_target,
-    cy_distance_to_squared,
-    cy_towards,
 )
 from sc2.data import Race
 from sc2.ids.ability_id import AbilityId
 from sc2.ids.unit_typeid import UnitTypeId as UnitID
-from sc2.position import Point2
 from sc2.unit import Unit
 from sc2.units import Units
 

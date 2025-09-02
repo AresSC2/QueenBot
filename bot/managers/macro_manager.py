@@ -1,28 +1,25 @@
-from typing import Callable, Any
-
-from cython_extensions import cy_towards, cy_unit_pending
-from cython_extensions.geometry import cy_distance_to_squared
-from sc2.ids.ability_id import AbilityId
-from sc2.ids.upgrade_id import UpgradeId
-from sc2.ids.unit_typeid import UnitTypeId as UnitID
-from sc2.position import Point2
-from sc2.unit import Unit
-from sc2.units import Units
-
-from ares.consts import UnitRole
+from typing import Any, Callable
 
 from ares import AresBot
 from ares.behaviors.macro import (
-    MacroPlan,
     AutoSupply,
     BuildWorkers,
-    UpgradeController,
-    SpawnController,
     ExpansionController,
     GasBuildingController,
-    TechUp,
+    MacroPlan,
     ProductionController,
+    SpawnController,
+    TechUp,
+    UpgradeController,
 )
+from ares.consts import UnitRole
+from cython_extensions import cy_towards, cy_unit_pending
+from cython_extensions.geometry import cy_distance_to_squared
+from sc2.ids.unit_typeid import UnitTypeId as UnitID
+from sc2.ids.upgrade_id import UpgradeId
+from sc2.position import Point2
+from sc2.unit import Unit
+
 from bot.consts import RequestType
 from bot.managers.queen_bot_mediator import QueenBotMediator
 
@@ -97,7 +94,7 @@ class MacroManager:
 
         await self._build_macro_hatcheries()
         # macro plan will add a evo, but we want 2 eventually
-        await self._build_evos()
+        # await self._build_evos()
         await self._build_nydus_networks()
         # Nydus worm placement is handled by the dedicated NydusManager
 
@@ -115,14 +112,20 @@ class MacroManager:
                     base_location=self.ai.start_location,
                 )
             )
+
+        structure_dict = self.ai.mediator.get_own_structures_dict
+        lair_tech: bool = (
+            len(structure_dict[UnitID.LAIR]) > 0 or len(structure_dict[UnitID.HIVE]) > 0
+        )
         if (
             self.ai.vespene >= 100
+            and not lair_tech
             and len(self.ai.mediator.get_own_army_dict[UnitID.QUEEN]) >= 4
         ):
             macro_plan.add(
                 TechUp(desired_tech=UnitID.LAIR, base_location=self.ai.start_location)
             )
-        if self.ai.supply_used > 170.0:
+        if self.ai.supply_used > 170.0 and len(structure_dict[UnitID.HIVE]) == 0:
             macro_plan.add(
                 TechUp(desired_tech=UnitID.HIVE, base_location=self.ai.start_location)
             )
@@ -133,15 +136,16 @@ class MacroManager:
                 },
             )
         )
-        macro_plan.add(
-            ProductionController(
-                army_composition_dict={
-                    UnitID.QUEEN: {"proportion": 1.0, "priority": 0}
-                },
-                base_location=self.ai.start_location,
+        if len(structure_dict[UnitID.SPAWNINGPOOL]) == 0:
+            macro_plan.add(
+                ProductionController(
+                    army_composition_dict={
+                        UnitID.QUEEN: {"proportion": 1.0, "priority": 0}
+                    },
+                    base_location=self.ai.start_location,
+                )
             )
-        )
-        if self.ai.supply_workers > 18:
+        if self.ai.supply_workers > 20:
             _max: int = (
                 3
                 if self.ai.supply_workers > 70
@@ -151,7 +155,7 @@ class MacroManager:
         if self.ai.mediator.get_did_enemy_rush and self.ai.supply_army < 16:
             max_pending: int = 0
         else:
-            max_pending: int = 2 if self.ai.minerals < 1250 else 4
+            max_pending: int = 3 if self.ai.minerals < 1250 else 4
         macro_plan.add(ExpansionController(to_count=99, max_pending=max_pending))
         self.ai.register_behavior(macro_plan)
 

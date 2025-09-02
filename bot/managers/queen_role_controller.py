@@ -1,15 +1,14 @@
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from ares.cache import property_cache_once_per_frame
+from ares.consts import DEBUG, UnitRole
 from cython_extensions.units_utils import cy_closest_to
 from loguru import logger
 from sc2.data import Race
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.unit import Unit
 from sc2.units import Units
-
-from ares.cache import property_cache_once_per_frame
-from ares.consts import UnitRole, DEBUG
 
 if TYPE_CHECKING:
     from ares import AresBot
@@ -26,15 +25,13 @@ class QueenRoleController:
 
     @property_cache_once_per_frame
     def required_creep_spreaders(self) -> int:
-        if self.ai.mediator.get_creep_coverage > 70.0:
+        if self.ai.mediator.get_creep_coverage > 85.0:
             return 0
 
-        if (
-            self.ai.mediator.get_main_ground_threats_near_townhall
-            and self.ai.get_total_supply(
-                self.ai.mediator.get_main_ground_threats_near_townhall
-            )
-            >= 4.0
+        ground_threats = self.ai.mediator.get_main_ground_threats_near_townhall
+        if ground_threats and (
+            self.ai.get_total_supply(ground_threats) >= 4.0
+            or ground_threats({UnitTypeId.ADEPT, UnitTypeId.REAPER})
         ):
             return 0
 
@@ -143,18 +140,18 @@ class QueenRoleController:
         -------
 
         """
-        self.aggressive = aggressive
-
-        if aggressive and defensive_queens:
-            self.ai.mediator.switch_roles(
-                from_role=UnitRole.QUEEN_DEFENCE, to_role=UnitRole.QUEEN_OFFENSIVE
-            )
-            return
-        elif not aggressive and offensive_queens:
-            self.ai.mediator.switch_roles(
-                from_role=UnitRole.QUEEN_OFFENSIVE, to_role=UnitRole.QUEEN_DEFENCE
-            )
-            return
+        # self.aggressive = aggressive
+        #
+        # if aggressive and defensive_queens:
+        #     self.ai.mediator.switch_roles(
+        #         from_role=UnitRole.QUEEN_DEFENCE, to_role=UnitRole.QUEEN_OFFENSIVE
+        #     )
+        #     return
+        # elif not aggressive and offensive_queens:
+        #     self.ai.mediator.switch_roles(
+        #         from_role=UnitRole.QUEEN_OFFENSIVE, to_role=UnitRole.QUEEN_DEFENCE
+        #     )
+        #     return
 
         self._manage_creep_role(defensive_queens, creep_queens)
         self._manage_inject_role(defensive_queens, inject_queens)

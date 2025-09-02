@@ -2,19 +2,12 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Union
 
 import numpy as np
-from sc2.data import Race
-from sc2.position import Point2
+from ares.behaviors.combat import CombatManeuver
+from ares.behaviors.combat.individual import KeepUnitSafe, ShootTargetInRange
+from ares.behaviors.combat.individual.queen_spread_creep import QueenSpreadCreep
+from ares.managers.manager_mediator import ManagerMediator
 from sc2.unit import Unit
 from sc2.units import Units
-
-from ares.behaviors.combat.individual import (
-    KeepUnitSafe,
-    ShootTargetInRange,
-    NydusPathUnitToTarget,
-)
-from ares.behaviors.combat.individual.queen_spread_creep import QueenSpreadCreep
-from ares.behaviors.combat import CombatManeuver
-from ares.managers.manager_mediator import ManagerMediator
 
 from bot.unit_control.base_control import BaseControl
 
@@ -46,19 +39,11 @@ class CreepQueens(BaseControl):
         """Execute the behavior."""
         avoid_grid: np.ndarray = self.mediator.get_ground_avoidance_grid
         ground_grid: np.ndarray = self.mediator.get_ground_grid
-        target: Point2 = (
-            self.mediator.get_defensive_third
-            if self.ai.time < 165.0
-            else (
-                self.ai.mediator.get_enemy_third
-                if self.ai.enemy_race != Race.Zerg
-                else self.ai.mediator.get_enemy_third
-            )
-        )
+
         for queen in units:
             maneuver: CombatManeuver = CombatManeuver()
             maneuver.add(KeepUnitSafe(queen, avoid_grid))
             maneuver.add(ShootTargetInRange(queen, self.ai.enemy_units))
             maneuver.add(KeepUnitSafe(queen, ground_grid))
-            maneuver.add(QueenSpreadCreep(queen, queen.position, target))
+            maneuver.add(QueenSpreadCreep(queen))
             self.ai.register_behavior(maneuver)

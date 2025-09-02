@@ -1,24 +1,25 @@
 from typing import Optional
 
-from sc2.units import Units
-
 from ares import AresBot
 from ares.behaviors.combat.individual.tumor_spread_creep import TumorSpreadCreep
 from ares.behaviors.macro import Mining
 from ares.consts import UnitRole
+from cython_extensions.geometry import cy_distance_to_squared
 from sc2.ids.ability_id import AbilityId
 from sc2.ids.unit_typeid import UnitTypeId as UnitID
+from sc2.position import Point2
 from sc2.unit import Unit
+from sc2.units import Units
 
 from bot.managers.combat_manager import CombatManager
 from bot.managers.macro_manager import MacroManager
 from bot.managers.nydus_manager import NydusManager
 from bot.managers.queen_bot_mediator import QueenBotMediator
 from bot.managers.queen_manager import QueenManager
-from bot.unit_control.base_control import BaseControl
-from bot.unit_control.overlord_creep_spotters import OverlordCreepSpotters
 from bot.managers.scout_manager import ScoutManager
 from bot.managers.worker_defence_manager import WorkerDefenceManager
+from bot.unit_control.base_control import BaseControl
+from bot.unit_control.overlord_creep_spotters import OverlordCreepSpotters
 
 
 class MyBot(AresBot):
@@ -58,10 +59,7 @@ class MyBot(AresBot):
             self.mediator.get_units_from_role(role=UnitRole.OVERLORD_CREEP_SPOTTER)
         )
 
-        tumors: list[Unit] = self.mediator.get_own_structures_dict[
-            UnitID.CREEPTUMORBURROWED
-        ]
-        for tumor in tumors:
+        for tumor in self.structures(UnitID.CREEPTUMORBURROWED):
             self.register_behavior(
                 TumorSpreadCreep(tumor, self.enemy_start_locations[0])
             )
@@ -69,6 +67,38 @@ class MyBot(AresBot):
             await self.chat_send("That's over 85% of the map covered in creep")
             await self.chat_send("How did you let that happen?!")
             self.sent_bm = True
+
+        if "TORCHES" in self.game_info.map_name.upper() and self.supply_workers > 22:
+            if mfs := [
+                mf
+                for mf in self.mineral_field
+                if mf.type_id == UnitID.RICHMINERALFIELD
+                and cy_distance_to_squared(self.mediator.get_own_nat, mf.position)
+                < 2500.0
+            ]:
+                if clearers := self.mediator.get_units_from_role(
+                    role=UnitRole.CONTROL_GROUP_EIGHT
+                ):
+                    for clearer in clearers:
+                        if clearer.is_returning:
+                            continue
+                        if clearer.is_gathering and clearer.order_target in [
+                            t.tag for t in mfs
+                        ]:
+                            continue
+                        clearer.gather(mfs[0])
+
+                elif worker := self.mediator.select_worker(
+                    target_position=self.mediator.get_own_nat, force_close=True
+                ):
+                    self.mediator.assign_role(
+                        tag=worker.tag, role=UnitRole.CONTROL_GROUP_EIGHT
+                    )
+            else:
+                self.mediator.switch_roles(
+                    from_role=UnitRole.CONTROL_GROUP_EIGHT,
+                    to_role=UnitRole.GATHERING,
+                )
 
     async def on_start(self) -> None:
         await super(MyBot, self).on_start()
@@ -117,3 +147,11 @@ class MyBot(AresBot):
         compare_health: float = max(50.0, unit.health_max * 0.09)
         if unit.health < compare_health and unit.is_structure:
             unit(AbilityId.CANCEL_BUILDINPROGRESS)
+
+        # something attacking ol early, set build completed
+        # so we can play generically
+        if (
+            unit.type_id == UnitID.OVERLORD
+            and not self.build_order_runner.build_completed
+        ):
+            self.build_order_runner.set_build_completed()
