@@ -104,7 +104,16 @@ class MacroManager:
     def _do_generic_macro_plan(self):
         macro_plan: MacroPlan = MacroPlan()
         macro_plan.add(AutoSupply(base_location=self.ai.start_location))
-        macro_plan.add(BuildWorkers(to_count=70))
+        macro_plan.add(
+            SpawnController(
+                army_composition_dict={
+                    UnitID.QUEEN: {"proportion": 1.0, "priority": 0}
+                },
+            )
+        )
+        idle_ths: list[Unit] = [th for th in self.ai.townhalls if th.is_ready and th.is_idle]
+        if not idle_ths or (self.ai.supply_workers < 33 and not self.ai.mediator.get_did_enemy_rush):
+            macro_plan.add(BuildWorkers(to_count=70))
         if self.upgrades_enabled:
             macro_plan.add(
                 UpgradeController(
@@ -129,13 +138,6 @@ class MacroManager:
             macro_plan.add(
                 TechUp(desired_tech=UnitID.HIVE, base_location=self.ai.start_location)
             )
-        macro_plan.add(
-            SpawnController(
-                army_composition_dict={
-                    UnitID.QUEEN: {"proportion": 1.0, "priority": 0}
-                },
-            )
-        )
         if len(structure_dict[UnitID.SPAWNINGPOOL]) == 0:
             macro_plan.add(
                 ProductionController(

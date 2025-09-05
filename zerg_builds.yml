@@ -57,6 +57,8 @@ Builds:
             - 13 drone *4
             - 13 overlord
             - 13 queen *2
+            - 13 drone *4
+            - 13 expand
 
     Greed:
         # Build constant workers till x supply
