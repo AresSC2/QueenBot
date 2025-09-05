@@ -2,12 +2,15 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Union
 
 import numpy as np
+from cython_extensions import cy_center
+from sc2.ids.ability_id import AbilityId
+
 from ares.behaviors.combat import CombatManeuver
 from ares.behaviors.combat.individual import (
     KeepUnitSafe,
     NydusPathUnitToTarget,
     ShootTargetInRange,
-    UseTransfuse,
+    UseTransfuse, UseAbility,
 )
 from ares.managers.manager_mediator import ManagerMediator
 from sc2.position import Point2
@@ -46,6 +49,21 @@ class QueensMovement(BaseControl):
         exit_nydus_max_influence: float = kwargs.get("exit_nydus_max_influence", 10.0)
         ground_grid: np.ndarray = self.mediator.get_ground_grid
         avoid_grid: np.ndarray = self.mediator.get_ground_avoidance_grid
+
+        point, exit_towards, nydus_tags = self.mediator.find_nydus_path_next_point(
+            start=Point2(cy_center(units)),
+            target=target,
+            grid=ground_grid,
+            sensitivity=10,
+        )
+        safe_nydus_exit: bool = True
+        if nydus_tags and not self.ai.mediator.is_position_safe(
+            grid=ground_grid,
+            position=exit_towards,
+            weight_safety_limit=exit_nydus_max_influence,
+        ):
+            safe_nydus_exit = False
+
         for queen in units:
             maneuver: CombatManeuver = CombatManeuver()
             maneuver.add(KeepUnitSafe(queen, avoid_grid))
@@ -54,12 +72,51 @@ class QueensMovement(BaseControl):
             maneuver.add(KeepUnitSafe(queen, ground_grid))
 
             maneuver.add(
-                NydusPathUnitToTarget(
+                self._nydus_movement(
                     queen,
-                    ground_grid,
-                    target=target,
-                    exit_nydus_max_influence=exit_nydus_max_influence,
+                    point,
+                    exit_towards,
+                    nydus_tags,
+                    target,
+                    safe_nydus_exit,
                 )
             )
 
             self.ai.register_behavior(maneuver)
+
+    def _nydus_movement(
+        self,
+        unit: Unit,
+        point: Point2,
+        exit_towards: Point2,
+        nydus_tags: list[int],
+        target: Point2,
+        safe_nydus_exit: bool,
+    ) -> CombatManeuver:
+        if unit.tag in self.mediator.get_banned_nydus_travellers:
+            return CombatManeuver()
+
+        maneuver: CombatManeuver = CombatManeuver()
+        if nydus_tags and safe_nydus_exit:
+            self.mediator.add_to_nydus_travellers(
+                unit=unit,
+                entry_nydus_tag=nydus_tags[0],
+                exit_nydus_tag=nydus_tags[1],
+                exit_towards=exit_towards,
+            )
+            if Point2(point) == self.ai.unit_tag_dict[nydus_tags[0]].position.rounded:
+                maneuver.add(
+                    UseAbility(
+                        AbilityId.SMART, unit, self.ai.unit_tag_dict[nydus_tags[0]]
+                    )
+                )
+            else:
+                maneuver.add(UseAbility(AbilityId.MOVE_MOVE, unit, point))
+
+        else:
+            if point:
+                maneuver.add(UseAbility(AbilityId.MOVE_MOVE, unit, point))
+            else:
+                maneuver.add(UseAbility(AbilityId.MOVE_MOVE, unit, target))
+
+        return maneuver

@@ -113,7 +113,7 @@ class CombatQueens(BaseControl):
             maneuver: CombatManeuver = CombatManeuver()
 
             if (
-                placed_tumor
+                not placed_tumor
                 and self.mediator.is_position_safe(grid=ground_grid, position=queen_pos)
                 and self.ai.has_creep(queen_pos)
                 and (
