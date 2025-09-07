@@ -53,6 +53,7 @@ class CombatQueens(BaseControl):
         target: Point2 = kwargs.get("target", self.ai.enemy_start_locations[0])
         check_close_combat_result = kwargs.get("check_close_combat_result", False)
         exit_nydus_max_influence = kwargs.get("exit_nydus_max_influence", 10.0)
+        spread_creep: bool = kwargs.get("spread_creep", True)
 
         ground_grid: np.ndarray = self.mediator.get_ground_grid
         avoid_grid: np.ndarray = self.mediator.get_ground_avoidance_grid
@@ -114,6 +115,7 @@ class CombatQueens(BaseControl):
 
             if (
                 not placed_tumor
+                and spread_creep
                 and self.mediator.is_position_safe(grid=ground_grid, position=queen_pos)
                 and self.ai.has_creep(queen_pos)
                 and (
@@ -124,6 +126,7 @@ class CombatQueens(BaseControl):
                         if cy_distance_to_squared(t.position, queen_pos) < 144.0
                     ]
                 )
+                and not self.mediator.get_position_blocks_expansion(position=queen_pos)
             ):
                 placed_tumor = True
                 maneuver.add(

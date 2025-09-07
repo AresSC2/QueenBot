@@ -7,9 +7,7 @@ from ares.consts import UnitRole
 from cython_extensions.geometry import cy_distance_to_squared
 from sc2.ids.ability_id import AbilityId
 from sc2.ids.unit_typeid import UnitTypeId as UnitID
-from sc2.position import Point2
 from sc2.unit import Unit
-from sc2.units import Units
 
 from bot.managers.combat_manager import CombatManager
 from bot.managers.macro_manager import MacroManager

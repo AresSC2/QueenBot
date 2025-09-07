@@ -38,11 +38,14 @@ class OverlordCreepSpotters(BaseControl):
 
     def execute(self, units: Union[list[Unit], Units], **kwargs) -> None:
         """Execute the behavior."""
-        spotter_positions: dict[
-            int, Point2
-        ] = self.mediator.get_overlord_creep_spotter_positions(
-            overlords=units, target_pos=self.ai.enemy_start_locations[0]
-        )
+        if self.mediator.get_creep_coverage < 55.0:
+            spotter_positions: dict[
+                int, Point2
+            ] = self.mediator.get_overlord_creep_spotter_positions(
+                overlords=units, target_pos=self.ai.enemy_start_locations[0]
+            )
+        else:
+            spotter_positions = dict()
 
         grid: np.ndarray = self.mediator.get_air_grid
         for ol in units:

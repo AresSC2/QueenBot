@@ -10,7 +10,8 @@ from ares.behaviors.combat.individual import (
     KeepUnitSafe,
     NydusPathUnitToTarget,
     ShootTargetInRange,
-    UseTransfuse, UseAbility,
+    UseTransfuse,
+    UseAbility,
 )
 from ares.managers.manager_mediator import ManagerMediator
 from sc2.position import Point2

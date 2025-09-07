@@ -71,10 +71,10 @@ class MacroManager:
     def required_upgrades(self) -> list[UpgradeId]:
         return [
             UpgradeId.ZERGMISSILEWEAPONSLEVEL1,
-            UpgradeId.ZERGMISSILEWEAPONSLEVEL2,
-            UpgradeId.ZERGMISSILEWEAPONSLEVEL3,
             UpgradeId.ZERGGROUNDARMORSLEVEL1,
+            UpgradeId.ZERGMISSILEWEAPONSLEVEL2,
             UpgradeId.ZERGGROUNDARMORSLEVEL2,
+            UpgradeId.ZERGMISSILEWEAPONSLEVEL3,
             UpgradeId.ZERGGROUNDARMORSLEVEL3,
             UpgradeId.OVERLORDSPEED,
         ]
@@ -103,7 +103,13 @@ class MacroManager:
 
     def _do_generic_macro_plan(self):
         macro_plan: MacroPlan = MacroPlan()
+        structure_dict = self.ai.mediator.get_own_structures_dict
+
         macro_plan.add(AutoSupply(base_location=self.ai.start_location))
+        if self.ai.supply_used > 170.0 and len(structure_dict[UnitID.HIVE]) == 0:
+            macro_plan.add(
+                TechUp(desired_tech=UnitID.HIVE, base_location=self.ai.start_location)
+            )
         macro_plan.add(
             SpawnController(
                 army_composition_dict={
@@ -111,8 +117,12 @@ class MacroManager:
                 },
             )
         )
-        idle_ths: list[Unit] = [th for th in self.ai.townhalls if th.is_ready and th.is_idle]
-        if not idle_ths or (self.ai.supply_workers < 33 and not self.ai.mediator.get_did_enemy_rush):
+        idle_ths: list[Unit] = [
+            th for th in self.ai.townhalls if th.is_ready and th.is_idle
+        ]
+        if not idle_ths or (
+            self.ai.supply_workers < 33 and not self.ai.mediator.get_did_enemy_rush
+        ):
             macro_plan.add(BuildWorkers(to_count=70))
         if self.upgrades_enabled:
             macro_plan.add(
@@ -122,7 +132,6 @@ class MacroManager:
                 )
             )
 
-        structure_dict = self.ai.mediator.get_own_structures_dict
         lair_tech: bool = (
             len(structure_dict[UnitID.LAIR]) > 0 or len(structure_dict[UnitID.HIVE]) > 0
         )
@@ -134,10 +143,7 @@ class MacroManager:
             macro_plan.add(
                 TechUp(desired_tech=UnitID.LAIR, base_location=self.ai.start_location)
             )
-        if self.ai.supply_used > 170.0 and len(structure_dict[UnitID.HIVE]) == 0:
-            macro_plan.add(
-                TechUp(desired_tech=UnitID.HIVE, base_location=self.ai.start_location)
-            )
+
         if len(structure_dict[UnitID.SPAWNINGPOOL]) == 0:
             macro_plan.add(
                 ProductionController(
@@ -234,6 +240,9 @@ class MacroManager:
         tech_ready: bool = self.ai.townhalls(UnitID.LAIR).ready or self.ai.townhalls(
             UnitID.HIVE
         )
+        networks: list[Unit] = own_structures_dict[UnitID.NYDUSNETWORK]
+        if len(networks) > 3:
+            return
 
         if (
             building_counter[UnitID.NYDUSNETWORK] > 0
@@ -250,7 +259,7 @@ class MacroManager:
                 len(
                     [
                         n
-                        for n in own_structures_dict[UnitID.NYDUSNETWORK]
+                        for n in networks
                         if cy_distance_to_squared(n.position, th.position) < 450.0
                     ]
                 )

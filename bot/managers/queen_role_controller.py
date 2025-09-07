@@ -25,7 +25,13 @@ class QueenRoleController:
 
     @property_cache_once_per_frame
     def required_creep_spreaders(self) -> int:
-        if self.ai.mediator.get_creep_coverage > 85.0:
+        if (
+            self.ai.mediator.get_creep_coverage > 85.0
+            or len(
+                self.ai.mediator.get_own_structures_dict[UnitTypeId.CREEPTUMORBURROWED]
+            )
+            > 25
+        ):
             return 0
 
         ground_threats = self.ai.mediator.get_main_ground_threats_near_townhall
