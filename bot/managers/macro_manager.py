@@ -81,6 +81,8 @@ class MacroManager:
 
     @property
     def upgrades_enabled(self) -> bool:
+        if self.ai.supply_workers < 36:
+            return False
         return (self.ai.vespene > 95) or (
             self.ai.minerals > 500 and self.ai.vespene > 350
         )
@@ -121,7 +123,7 @@ class MacroManager:
             th for th in self.ai.townhalls if th.is_ready and th.is_idle
         ]
         if not idle_ths or (
-            self.ai.supply_workers < 33
+            self.ai.supply_workers < 30
             and not self.ai.mediator.get_did_enemy_rush
             and len(self.ai.mediator.get_enemy_army_dict[UnitID.REAPER]) < 3
         ):
@@ -140,7 +142,7 @@ class MacroManager:
         if (
             self.ai.vespene >= 100
             and not lair_tech
-            and len(self.ai.mediator.get_own_army_dict[UnitID.QUEEN]) >= 4
+            and len(self.ai.mediator.get_own_army_dict[UnitID.QUEEN]) >= 7
         ):
             macro_plan.add(
                 TechUp(desired_tech=UnitID.LAIR, base_location=self.ai.start_location)
