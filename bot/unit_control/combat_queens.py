@@ -162,9 +162,6 @@ class CombatQueens(BaseControl):
                             safe_nydus_exit,
                         )
                     )
-                    # maneuver.add(
-                    #     NydusPathUnitToTarget(queen, ground_grid, target=target)
-                    # )
             else:
                 maneuver.add(KeepUnitSafe(queen, ground_grid))
                 if cy_distance_to_squared(queen_pos, target) > 36.0:
@@ -193,18 +190,24 @@ class CombatQueens(BaseControl):
         target: Point2,
         safe_nydus_exit: bool,
     ) -> CombatManeuver:
-        if unit.tag in self.mediator.get_banned_nydus_travellers:
-            return CombatManeuver()
-
         maneuver: CombatManeuver = CombatManeuver()
-        if nydus_tags and safe_nydus_exit:
+        if (
+            nydus_tags
+            and safe_nydus_exit
+            and unit.tag not in self.mediator.get_banned_nydus_travellers
+        ):
             self.mediator.add_to_nydus_travellers(
                 unit=unit,
                 entry_nydus_tag=nydus_tags[0],
                 exit_nydus_tag=nydus_tags[1],
                 exit_towards=exit_towards,
             )
-            if Point2(point) == self.ai.unit_tag_dict[nydus_tags[0]].position.rounded:
+            if (
+                cy_distance_to_squared(
+                    Point2(point), self.ai.unit_tag_dict[nydus_tags[0]].position
+                )
+                < 36.0
+            ):
                 maneuver.add(
                     UseAbility(
                         AbilityId.SMART, unit, self.ai.unit_tag_dict[nydus_tags[0]]

@@ -121,7 +121,9 @@ class MacroManager:
             th for th in self.ai.townhalls if th.is_ready and th.is_idle
         ]
         if not idle_ths or (
-            self.ai.supply_workers < 33 and not self.ai.mediator.get_did_enemy_rush
+            self.ai.supply_workers < 33
+            and not self.ai.mediator.get_did_enemy_rush
+            and len(self.ai.mediator.get_enemy_army_dict[UnitID.REAPER]) < 3
         ):
             macro_plan.add(BuildWorkers(to_count=70))
         if self.upgrades_enabled:
