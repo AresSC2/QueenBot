@@ -28,6 +28,14 @@ from bot.unit_control.base_control import BaseControl
 if TYPE_CHECKING:
     from ares import AresBot
 
+STATIC_DEFENCE: set[UnitID] = {
+    UnitID.BUNKER,
+    UnitID.PLANETARYFORTRESS,
+    UnitID.SPINECRAWLER,
+    UnitID.PHOTONCANNON,
+}
+
+
 
 @dataclass
 class CombatQueens(BaseControl):
@@ -57,11 +65,17 @@ class CombatQueens(BaseControl):
 
         ground_grid: np.ndarray = self.mediator.get_ground_grid
         avoid_grid: np.ndarray = self.mediator.get_ground_avoidance_grid
-        all_close_enemy: dict[int, Units] = self.mediator.get_units_in_range(
-            start_points=units,
-            distances=13.5,
+        all_close_enemy: Units = self.mediator.get_units_in_range(
+            start_points=[Point2(cy_center(units))],
+            distances=[13.5],
             query_tree=UnitTreeQueryType.AllEnemy,
-            return_as_dict=True,
+            return_as_dict=False,
+        )[0].filter(lambda u: u.type_id not in COMMON_UNIT_IGNORE_TYPES)
+        only_enemy_units: list[Unit] = [
+            u for u in all_close_enemy if u.type_id not in ALL_STRUCTURES
+        ]
+        ground, flying = self.ai.split_ground_fliers(
+            only_enemy_units, return_as_lists=True
         )
         tumors: list[Unit] = self.mediator.get_own_structures_dict[
             UnitID.CREEPTUMORQUEEN
@@ -73,12 +87,7 @@ class CombatQueens(BaseControl):
             can_fight = (
                 self.mediator.can_win_fight(
                     own_units=units,
-                    enemy_units=[
-                        u
-                        for u in self.ai.enemy_units
-                        if u.type_id not in COMMON_UNIT_IGNORE_TYPES
-                        and cy_distance_to_squared(u.position, cy_center(units)) < 225.0
-                    ],
+                    enemy_units=only_enemy_units,
                 )
                 in VICTORY_MARGINAL_OR_BETTER
             )
@@ -98,18 +107,7 @@ class CombatQueens(BaseControl):
 
         placed_tumor: bool = False
         for queen in units:
-            near_enemy: list[Unit] = [
-                u
-                for u in all_close_enemy[queen.tag]
-                if u.type_id not in COMMON_UNIT_IGNORE_TYPES
-            ]
 
-            only_enemy_units: list[Unit] = [
-                u for u in near_enemy if u.type_id not in ALL_STRUCTURES
-            ]
-            ground, flying = self.ai.split_ground_fliers(
-                only_enemy_units, return_as_lists=True
-            )
             queen_pos: Point2 = queen.position
             maneuver: CombatManeuver = CombatManeuver()
 
@@ -136,13 +134,14 @@ class CombatQueens(BaseControl):
             maneuver.add(UseTransfuse(queen, units))
             maneuver.add(ShootTargetInRange(queen, flying))
             maneuver.add(ShootTargetInRange(queen, ground))
-            maneuver.add(ShootTargetInRange(queen, near_enemy))
-            if near_enemy:
+            if not only_enemy_units or len([e for e in all_close_enemy if e.type_id in STATIC_DEFENCE]) > 0:
+                maneuver.add(ShootTargetInRange(queen, all_close_enemy))
+            if all_close_enemy:
                 if can_engage and can_fight:
                     if only_enemy_units:
                         closest_enemy: Unit = cy_closest_to(queen_pos, only_enemy_units)
                     else:
-                        closest_enemy: Unit = cy_closest_to(queen_pos, near_enemy)
+                        closest_enemy: Unit = cy_closest_to(queen_pos, all_close_enemy)
                     if self.ai.has_creep(queen_pos) or (
                         closest_enemy.can_attack_ground
                         and closest_enemy.ground_range < 4
@@ -175,9 +174,6 @@ class CombatQueens(BaseControl):
                             safe_nydus_exit,
                         )
                     )
-                    # maneuver.add(
-                    #     NydusPathUnitToTarget(queen, ground_grid, target=target)
-                    # )
 
             self.ai.register_behavior(maneuver)
 

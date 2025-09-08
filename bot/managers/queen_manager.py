@@ -151,7 +151,7 @@ class QueenManager:
                         target=attack_target,
                         can_engage=can_engage,
                         check_close_combat_result=aggressive,
-                        spread_creep=self.ai.mediator.get_creep_coverage < 75.0,
+                        spread_creep=self.ai.mediator.get_creep_coverage < 85.0,
                     )
 
         if nydus_queens:
