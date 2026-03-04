@@ -53,17 +53,18 @@ class InjectQueens(BaseControl):
             maneuver.add(KeepUnitSafe(queen, ground_grid))
             if target_th_tag and target_th_tag in self.ai.unit_tag_dict:
                 target_th: Unit = self.ai.unit_tag_dict[target_th_tag]
-                maneuver.add(
-                    UseAbility(
-                        AbilityId.EFFECT_INJECTLARVA,
-                        queen,
-                        target_th,
+                if target_th.is_ready:
+                    maneuver.add(
+                        UseAbility(
+                            AbilityId.EFFECT_INJECTLARVA,
+                            queen,
+                            target_th,
+                        )
                     )
-                )
-                maneuver.add(
-                    PathUnitToTarget(
-                        queen, ground_grid, target_th.position, success_at_distance=4
+                    maneuver.add(
+                        PathUnitToTarget(
+                            queen, ground_grid, target_th.position, success_at_distance=4
+                        )
                     )
-                )
 
             self.ai.register_behavior(maneuver)

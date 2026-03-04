@@ -45,7 +45,13 @@ class MyBot(AresBot):
 
     async def on_step(self, iteration: int) -> None:
         await super(MyBot, self).on_step(iteration)
-        self.register_behavior(Mining())
+        per_gas: int = 3
+        if self.supply_workers < 30 and (
+            self.mediator.get_enemy_worker_rushed or self.mediator.get_enemy_ling_rushed
+        ):
+            per_gas = 0
+
+        self.register_behavior(Mining(workers_per_gas=per_gas))
         await self.macro_manager.update()
         self.queen_manager.update()
         self.combat_manager.update()

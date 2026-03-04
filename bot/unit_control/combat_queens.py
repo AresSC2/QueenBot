@@ -36,7 +36,6 @@ STATIC_DEFENCE: set[UnitID] = {
 }
 
 
-
 @dataclass
 class CombatQueens(BaseControl):
     """Execute behavior for queen combat.
@@ -57,6 +56,8 @@ class CombatQueens(BaseControl):
 
     def execute(self, units: Union[list[Unit], Units], **kwargs) -> None:
         """Execute the behavior."""
+        if not units:
+            return
         can_engage: bool = kwargs.get("can_engage", True)
         target: Point2 = kwargs.get("target", self.ai.enemy_start_locations[0])
         check_close_combat_result = kwargs.get("check_close_combat_result", False)
@@ -107,7 +108,6 @@ class CombatQueens(BaseControl):
 
         placed_tumor: bool = False
         for queen in units:
-
             queen_pos: Point2 = queen.position
             maneuver: CombatManeuver = CombatManeuver()
 
@@ -134,8 +134,8 @@ class CombatQueens(BaseControl):
             maneuver.add(UseTransfuse(queen, units))
             maneuver.add(ShootTargetInRange(queen, flying))
             maneuver.add(ShootTargetInRange(queen, ground))
-            if not only_enemy_units or len([e for e in all_close_enemy if e.type_id in STATIC_DEFENCE]) > 0:
-                maneuver.add(ShootTargetInRange(queen, all_close_enemy))
+            maneuver.add(ShootTargetInRange(queen, all_close_enemy))
+
             if all_close_enemy:
                 if can_engage and can_fight:
                     if only_enemy_units:

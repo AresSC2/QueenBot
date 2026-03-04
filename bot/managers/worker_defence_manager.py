@@ -67,20 +67,21 @@ class WorkerDefenceManager:
                 self.bunker_drone_tags.add(worker.tag)
                 self.ai.mediator.assign_role(tag=worker.tag, role=UnitRole.DEFENDING)
 
-        if drones := self.ai.workers.tags_in(self.bunker_drone_tags):
-            for drone in drones:
-                if bunkers or marines or scvs:
-                    if drone.health_percentage < 0.4:
-                        drone.gather(
-                            cy_closest_to(self.ai.start_location, self.ai.mineral_field)
-                        )
-                        self.bunker_drone_tags.remove(drone.tag)
-                        self.assign_drone_back_to_gathering(drone.tag)
+            if drones := self.ai.workers.tags_in(self.bunker_drone_tags):
+                for drone in drones:
+                    if bunkers or marines or scvs:
+                        if drone.health_percentage < 0.4:
+                            drone.gather(
+                                cy_closest_to(self.ai.start_location, self.ai.mineral_field)
+                            )
+                            self.bunker_drone_tags.remove(drone.tag)
+                            self.assign_drone_back_to_gathering(drone.tag)
                     elif scvs:
                         drone.attack(cy_closest_to(drone.position, scvs))
                     elif marines:
-                        cy_closest_to(drone.position, marines)
-                        drone.attack(cy_closest_to(drone.position, marines))
+                        # target the closest marine; avoid calling cy_closest_to without using the result
+                        target = cy_closest_to(drone.position, marines)
+                        drone.attack(target)
                     else:
                         drone.attack(cy_closest_to(drone.position, bunkers))
                 else:
@@ -115,7 +116,11 @@ class WorkerDefenceManager:
         enemy_lings: Units = enemy_workers(UnitID.ZERGLING)
 
         # this makes sure we go all in after defending
-        if enemy_workers.amount > 8 and self.ai.time < 180:
+        if (
+            enemy_workers.amount > 8
+            and self.ai.time < 180
+            and not self.ai.mediator.get_enemy_ling_rushed
+        ):
             self.enemy_committed_worker_rush = True
 
         # cancel expansion, so we can build more drones
@@ -135,7 +140,9 @@ class WorkerDefenceManager:
         if num_enemy_workers > 0 and self.ai.workers:
             workers_needed: int = (
                 num_enemy_workers
-                if num_enemy_workers <= 6 and enemy_lings.amount <= 3
+                if num_enemy_workers <= 6
+                and enemy_lings.amount <= 3
+                and not self.ai.mediator.get_enemy_ling_rushed
                 else self.ai.workers.amount - 2
             )
             if len(self.worker_defence_tags) < workers_needed:
@@ -189,12 +196,14 @@ class WorkerDefenceManager:
                     closest_enemy: Unit = cy_closest_to(
                         worker.position, all_enemy_workers
                     )
+                    enemy_near_mineral = cy_closest_to(
+                        close_mineral_patch.position, all_enemy_workers
+                    )
                     if (
                         all_enemy_workers
+                        and enemy_near_mineral
                         and cy_distance_to(
-                            cy_closest_to(
-                                close_mineral_patch.position, all_enemy_workers
-                            ).position,
+                            enemy_near_mineral.position,
                             close_mineral_patch.position,
                         )
                         < 2

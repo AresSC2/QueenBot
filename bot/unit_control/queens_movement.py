@@ -45,6 +45,8 @@ class QueensMovement(BaseControl):
 
     def execute(self, units: Union[list[Unit], Units], **kwargs) -> None:
         """Execute the behavior."""
+        if not units:
+            return
         target: Point2 = kwargs.get("target", self.mediator.get_own_nat)
         exit_nydus_max_influence: float = kwargs.get("exit_nydus_max_influence", 10.0)
         ground_grid: np.ndarray = self.mediator.get_ground_grid

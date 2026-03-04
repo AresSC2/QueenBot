@@ -121,8 +121,7 @@ class QueenManager:
 
         if defensive_queens:
             attack_target: Point2
-            aggressive: bool = self.queen_bot_mediator.get_should_be_aggressive
-            if aggressive:
+            if self.queen_bot_mediator.get_should_be_aggressive:
                 attack_target = self.queen_bot_mediator.get_attack_target
             else:
                 attack_target: Point2 = Point2(
@@ -148,7 +147,7 @@ class QueenManager:
                     )
                     self._combat_queens_control.execute(
                         squad.squad_units,
-                        target=attack_target,
+                        target=_target,
                         can_engage=can_engage,
                         check_close_combat_result=aggressive,
                         spread_creep=self.ai.mediator.get_creep_coverage < 85.0,

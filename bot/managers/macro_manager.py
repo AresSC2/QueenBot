@@ -108,7 +108,7 @@ class MacroManager:
         structure_dict = self.ai.mediator.get_own_structures_dict
 
         macro_plan.add(AutoSupply(base_location=self.ai.start_location))
-        if self.ai.supply_used > 170.0 and len(structure_dict[UnitID.HIVE]) == 0:
+        if self.ai.supply_used > 170.0 and len(structure_dict.get(UnitID.HIVE, [])) == 0:
             macro_plan.add(
                 TechUp(desired_tech=UnitID.HIVE, base_location=self.ai.start_location)
             )
@@ -148,7 +148,7 @@ class MacroManager:
                 TechUp(desired_tech=UnitID.LAIR, base_location=self.ai.start_location)
             )
 
-        if len(structure_dict[UnitID.SPAWNINGPOOL]) == 0:
+        if len(structure_dict.get(UnitID.SPAWNINGPOOL, [])) == 0:
             macro_plan.add(
                 ProductionController(
                     army_composition_dict={

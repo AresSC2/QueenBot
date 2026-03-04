@@ -162,7 +162,7 @@ class ScoutManager:
 
         if not overseers:
             new_tag: Optional[int] = self._morph_overseer(overlords)
-            if new_tag and new_tag != self.nydus_overseer_tag:
+            if new_tag and new_tag != self.overseer_tag:
                 self.overseer_tag = new_tag
                 self.ai.mediator.assign_role(
                     tag=new_tag, role=UnitRole.ATTACKING_MAIN_SQUAD

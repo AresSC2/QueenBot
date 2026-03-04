@@ -106,7 +106,7 @@ class QueenRoleController:
         ] = self.ai.mediator.get_own_structures_dict
         if (
             self.ai.supply_army > 30
-            and len([structures_dict[UnitTypeId.NYDUSCANAL]]) > 0
+            and len(structures_dict[UnitTypeId.NYDUSCANAL]) > 0
             and len([s for s in structures_dict[UnitTypeId.NYDUSNETWORK] if s.is_ready])
             > 0
         ):
