@@ -88,7 +88,8 @@ class WorkerDefenceManager:
                     drone.gather(
                         cy_closest_to(self.ai.start_location, self.ai.mineral_field)
                     )
-                    self.bunker_drone_tags.remove(drone.tag)
+                    if drone.tag in self.bunker_drone_tags:
+                        self.bunker_drone_tags.remove(drone.tag)
                     self.assign_drone_back_to_gathering(drone.tag)
 
     def _handle_worker_rush(self) -> None:
