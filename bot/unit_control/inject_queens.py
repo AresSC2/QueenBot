@@ -63,7 +63,10 @@ class InjectQueens(BaseControl):
                     )
                     maneuver.add(
                         PathUnitToTarget(
-                            queen, ground_grid, target_th.position, success_at_distance=4
+                            queen,
+                            ground_grid,
+                            target_th.position,
+                            success_at_distance=4,
                         )
                     )
 

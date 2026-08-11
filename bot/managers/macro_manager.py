@@ -71,8 +71,8 @@ class MacroManager:
     def required_upgrades(self) -> list[UpgradeId]:
         return [
             UpgradeId.ZERGMISSILEWEAPONSLEVEL1,
-            UpgradeId.ZERGGROUNDARMORSLEVEL1,
             UpgradeId.ZERGMISSILEWEAPONSLEVEL2,
+            UpgradeId.ZERGGROUNDARMORSLEVEL1,
             UpgradeId.ZERGGROUNDARMORSLEVEL2,
             UpgradeId.ZERGMISSILEWEAPONSLEVEL3,
             UpgradeId.ZERGGROUNDARMORSLEVEL3,
@@ -108,7 +108,10 @@ class MacroManager:
         structure_dict = self.ai.mediator.get_own_structures_dict
 
         macro_plan.add(AutoSupply(base_location=self.ai.start_location))
-        if self.ai.supply_used > 170.0 and len(structure_dict.get(UnitID.HIVE, [])) == 0:
+        if (
+            self.ai.supply_used > 170.0
+            and len(structure_dict.get(UnitID.HIVE, [])) == 0
+        ):
             macro_plan.add(
                 TechUp(desired_tech=UnitID.HIVE, base_location=self.ai.start_location)
             )

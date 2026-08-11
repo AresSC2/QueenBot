@@ -72,7 +72,9 @@ class WorkerDefenceManager:
                     if bunkers or marines or scvs:
                         if drone.health_percentage < 0.4:
                             drone.gather(
-                                cy_closest_to(self.ai.start_location, self.ai.mineral_field)
+                                cy_closest_to(
+                                    self.ai.start_location, self.ai.mineral_field
+                                )
                             )
                             self.bunker_drone_tags.remove(drone.tag)
                             self.assign_drone_back_to_gathering(drone.tag)
